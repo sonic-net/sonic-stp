@@ -1,0 +1,15 @@
+[Unit]
+Description=IP address handler
+After=sonic-create-interface.service
+Wants=sonic-create-interface.service
+DefaultDependencies=no
+
+[Service]
+EnvironmentFile=/etc/sonic/sonic-environment
+ExecStart=/usr/bin/base_ip
+
+# Resource Limitations
+LimitNOFILE=16384
+
+[Install]
+WantedBy=multi-user.target

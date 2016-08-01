@@ -1,0 +1,21 @@
+Source: libsonic-nas-linux
+Section: net
+Priority: optional
+Maintainer: Dell <support@dell.com>
+Build-Depends: debhelper (>= 9), autotools-dev,libsonic-common-dev,libsonic-nas-common-dev,libsonic-object-library-dev,libsonic-logging-dev
+Standards-Version: 3.9.3
+
+Package: libsonic-nas-linux1
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-nas-common1,libsonic-common1,libsonic-object-library1,libsonic-logging1
+Description: This package contains the Linux integration portion of the Network abstractions service.
+
+Package: libsonic-nas-linux-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,libsonic-model-dev,libsonic-nas-linux1
+Description: This package contains the Linux integration portion of the Network abstractions service.
+
+Package: sonic-nas-linux
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends},sonic-object-library,python-sonic-object-library, sonic-nas-interface
+Description: This package contains the Linux integration portion of the Network abstractions service.
