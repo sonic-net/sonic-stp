@@ -12,7 +12,7 @@ Description: This package contains the Linux integration portion of the Network 
 
 Package: libsonic-nas-linux-dev
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,libsonic-model-dev,libsonic-nas-linux1
+Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-common-dev,libsonic-object-library-dev,libsonic-logging-dev,libsonic-nas-common-dev,libsonic-model-dev,libsonic-nas-linux1 (=${binary:Version})
 Description: This package contains the Linux integration portion of the Network abstractions service.
 
 Package: sonic-nas-linux
