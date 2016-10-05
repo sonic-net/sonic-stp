@@ -17,7 +17,7 @@ libsonic_nas_linux_la_CXXFLAGS=-std=c++11
 
 libsonic_nas_linux_la_LDFLAGS=-shared -version-info 1:1:0
 
-libsonic_nas_linux_la_LIBADD=-lsonic_common -lsonic_object_library -lsonic_cps_class_map -lsonic_logging
+libsonic_nas_linux_la_LIBADD=-lsonic_common -lsonic_object_library -lsonic_logging
 
 systemdconfdir=/lib/systemd/system
 systemdconf_DATA = scripts/init/*.service
