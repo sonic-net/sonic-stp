@@ -1,3 +1,5 @@
+ACLOCAL_AMFLAGS=-I m4
+
 bin_SCRIPTS = scripts/bin/*
 
 pyutilsdir=$(libdir)/sonic
