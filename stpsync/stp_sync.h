@@ -1,6 +1,18 @@
 /*
- * Copyright 2019 Broadcom. All rights reserved. 
- * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+ * Copyright 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or
+ * its subsidiaries.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef __STPSYNC__
@@ -20,7 +32,7 @@ namespace swss {
             void delVlanFromInstance(uint16_t vlan_id, uint16_t instance);
             void updateStpVlanInfo(STP_VLAN_TABLE * stp_vlan);
             void delStpVlanInfo(uint16_t vlan_id);
-            void updateStpVlanInterfaceInfo(STP_VLAN_INTF_TABLE * stp_vlan_intf);
+            void updateStpVlanInterfaceInfo(STP_VLAN_PORT_TABLE * stp_vlan_intf);
             void delStpVlanInterfaceInfo(char * if_name, uint16_t vlan_id);
             void updateStpPortState(char * ifName, uint16_t instance, uint8_t state);
             void delStpPortState(char * ifName, uint16_t instance);
@@ -37,9 +49,9 @@ namespace swss {
         protected:
         private:
             ProducerStateTable m_stpVlanTable;
-            ProducerStateTable m_stpVlanInterfaceTable;
+            ProducerStateTable m_stpVlanPortTable;
             ProducerStateTable m_stpVlanInstanceTable;
-            ProducerStateTable m_stpInterfaceTable;
+            ProducerStateTable m_stpPortTable;
             ProducerStateTable m_stpPortStateTable; 
             ProducerStateTable m_appVlanMemberTable;
             ProducerStateTable m_stpFastAgeFlushTable; 

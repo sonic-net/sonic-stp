@@ -1,6 +1,18 @@
 /*
- * Copyright 2019 Broadcom. All rights reserved. 
- * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+ * Copyright 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or
+ * its subsidiaries.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef __STP_IPC_H__
@@ -18,8 +30,8 @@ typedef enum STP_MSG_TYPE {
     STP_INIT_READY,
     STP_BRIDGE_CONFIG,
     STP_VLAN_CONFIG,
-    STP_VLAN_INTF_CONFIG,
-    STP_INTF_CONFIG,
+    STP_VLAN_PORT_CONFIG,
+    STP_PORT_CONFIG,
     STP_VLAN_MEM_CONFIG,
     STP_STPCTL_MSG,
     STP_MAX_MSG
@@ -84,14 +96,14 @@ typedef struct STP_VLAN_CONFIG_MSG {
     PORT_ATTR   port_list[0];
 }__attribute__ ((packed))STP_VLAN_CONFIG_MSG;
 
-typedef struct STP_VLAN_INTF_CONFIG_MSG {
+typedef struct STP_VLAN_PORT_CONFIG_MSG {
     uint8_t     opcode; // enable/disable
     int         vlan_id;
     char        intf_name[IFNAMSIZ];
     int         inst_id;
     int         path_cost;
     int         priority;
-}__attribute__ ((packed))STP_VLAN_INTF_CONFIG_MSG;
+}__attribute__ ((packed))STP_VLAN_PORT_CONFIG_MSG;
 
 typedef struct VLAN_ATTR {
     int         inst_id;
@@ -99,7 +111,7 @@ typedef struct VLAN_ATTR {
     int8_t      mode;
 }VLAN_ATTR;
 
-typedef struct STP_INTF_CONFIG_MSG {
+typedef struct STP_PORT_CONFIG_MSG {
     uint8_t     opcode; // enable/disable
     char        intf_name[IFNAMSIZ];
     uint8_t     enabled;
@@ -112,7 +124,7 @@ typedef struct STP_INTF_CONFIG_MSG {
     int         priority;
     int         count;
     VLAN_ATTR   vlan_list[0];
-}__attribute__ ((packed))STP_INTF_CONFIG_MSG;
+}__attribute__ ((packed))STP_PORT_CONFIG_MSG;
 
 typedef struct STP_VLAN_MEM_CONFIG_MSG {
     uint8_t     opcode; // enable/disable

@@ -1,6 +1,18 @@
 /*
- * Copyright 2019 Broadcom. All rights reserved. 
- * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+ * Copyright 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or
+ * its subsidiaries.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "stp_inc.h"
@@ -13,8 +25,8 @@ char msgtype_str[][64] = {
     "STP_INIT_READY",
     "STP_BRIDGE_CONFIG",
     "STP_VLAN_CONFIG",
-    "STP_VLAN_INTF_CONFIG",
-    "STP_INTF_CONFIG",
+    "STP_VLAN_PORT_CONFIG",
+    "STP_PORT_CONFIG",
     "STP_VLAN_MEM_CONFIG",
     "STP_STPCTL_MSG",
     "STP_MAX_MSG"
@@ -1607,7 +1619,7 @@ static void stpmgr_send_reply(struct sockaddr_un addr, void *msg, int len)
 
 static void stpmgr_process_vlan_intf_config_msg(void *msg)
 {
-    STP_VLAN_INTF_CONFIG_MSG *pmsg = (STP_VLAN_INTF_CONFIG_MSG *)msg;
+    STP_VLAN_PORT_CONFIG_MSG *pmsg = (STP_VLAN_PORT_CONFIG_MSG *)msg;
     uint32_t port_id;
 
     if (!pmsg)
@@ -1638,7 +1650,7 @@ static void stpmgr_process_vlan_intf_config_msg(void *msg)
 
 static void stpmgr_process_intf_config_msg(void *msg)
 {
-    STP_INTF_CONFIG_MSG *pmsg = (STP_INTF_CONFIG_MSG *)msg;
+    STP_PORT_CONFIG_MSG *pmsg = (STP_PORT_CONFIG_MSG *)msg;
     uint32_t port_id;
     int inst_count;
     VLAN_ATTR *attr;
@@ -1835,12 +1847,12 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
                 stpmgr_process_vlan_config_msg(msg->data);
                 break;
             }
-        case STP_VLAN_INTF_CONFIG:
+        case STP_VLAN_PORT_CONFIG:
             {
                 stpmgr_process_vlan_intf_config_msg(msg->data);
                 break;
             }
-        case STP_INTF_CONFIG:
+        case STP_PORT_CONFIG:
             {
                 stpmgr_process_intf_config_msg(msg->data);
                 break;

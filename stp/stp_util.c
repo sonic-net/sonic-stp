@@ -1,6 +1,18 @@
 /*
- * Copyright 2019 Broadcom. All rights reserved. 
- * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+ * Copyright 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or
+ * its subsidiaries.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "stp_inc.h"
@@ -825,7 +837,7 @@ void stputil_update_mask(PORT_MASK *mask, PORT_ID port_number, bool add)
 
 void stptimer_sync_port_class(STP_CLASS *stp_class, STP_PORT_CLASS * stp_port)
 {
-    STP_VLAN_INTF_TABLE stp_vlan_intf = {0};
+    STP_VLAN_PORT_TABLE stp_vlan_intf = {0};
     char * ifname;
     UINT32 timer_value = 0;
 

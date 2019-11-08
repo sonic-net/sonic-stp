@@ -1,6 +1,18 @@
 /*
- * Copyright 2019 Broadcom. All rights reserved. 
- * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+ * Copyright 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or
+ * its subsidiaries.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include <string.h>
 #include <errno.h>
@@ -21,9 +33,9 @@ using namespace swss;
 
 StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
     m_stpVlanTable(db, APP_STP_VLAN_TABLE_NAME),
-    m_stpVlanInterfaceTable(db, APP_STP_VLAN_INTF_TABLE_NAME),
+    m_stpVlanPortTable(db, APP_STP_VLAN_PORT_TABLE_NAME),
     m_stpVlanInstanceTable(db, APP_STP_VLAN_INSTANCE_TABLE_NAME),
-    m_stpInterfaceTable(db, APP_STP_INTF_TABLE_NAME),
+    m_stpPortTable(db, APP_STP_PORT_TABLE_NAME),
     m_stpPortStateTable(db, APP_STP_PORT_STATE_TABLE_NAME),
     m_appVlanMemberTable(db, APP_VLAN_MEMBER_TABLE_NAME),
     m_stpFastAgeFlushTable(db, APP_STP_FASTAGEING_FLUSH_TABLE_NAME),
@@ -60,7 +72,7 @@ extern "C" {
         sync.delStpVlanInfo(vlan_id);
     }
     
-    void stpsync_update_port_class(STP_VLAN_INTF_TABLE * stp_vlan_intf)
+    void stpsync_update_port_class(STP_VLAN_PORT_TABLE * stp_vlan_intf)
     {
         sync.updateStpVlanInterfaceInfo(stp_vlan_intf);
     }
@@ -264,7 +276,7 @@ void StpSync::delStpVlanInfo(uint16_t vlan_id)
 }
 
 
-void StpSync::updateStpVlanInterfaceInfo(STP_VLAN_INTF_TABLE * stp_vlan_intf)
+void StpSync::updateStpVlanInterfaceInfo(STP_VLAN_PORT_TABLE * stp_vlan_intf)
 {
     std::string ifName(stp_vlan_intf->if_name);
     std::vector<FieldValueTuple> fvVector;
@@ -358,9 +370,9 @@ void StpSync::updateStpVlanInterfaceInfo(STP_VLAN_INTF_TABLE * stp_vlan_intf)
     vlan = VLAN_PREFIX + to_string(stp_vlan_intf->vlan_id);
     key = vlan + ":" + ifName;
     
-    m_stpVlanInterfaceTable.set(key, fvVector);
+    m_stpVlanPortTable.set(key, fvVector);
 
-    SWSS_LOG_DEBUG("Update STP_VLAN_INTF_TABLE for %s intf %s", vlan.c_str(), ifName.c_str());
+    SWSS_LOG_DEBUG("Update STP_VLAN_PORT_TABLE for %s intf %s", vlan.c_str(), ifName.c_str());
 
 }
 
@@ -372,9 +384,9 @@ void StpSync::delStpVlanInterfaceInfo(char * if_name, uint16_t vlan_id)
     vlan = VLAN_PREFIX + to_string(vlan_id);
     key = vlan + ":" + ifName;
     
-    m_stpVlanInterfaceTable.del(key);
+    m_stpVlanPortTable.del(key);
 
-    SWSS_LOG_NOTICE("Delete STP_VLAN_INTF_TABLE for %s intf %s", vlan.c_str(), ifName.c_str());
+    SWSS_LOG_NOTICE("Delete STP_VLAN_PORT_TABLE for %s intf %s", vlan.c_str(), ifName.c_str());
 
 }
 
@@ -503,7 +515,7 @@ void StpSync::updateBpduGuardShutdown(char * if_name, bool enabled)
     FieldValueTuple fv("bpdu_guard_shutdown", (enabled ? "yes" : "no"));
     fvVector.push_back(fv);
 
-    m_stpInterfaceTable.set(key, fvVector);
+    m_stpPortTable.set(key, fvVector);
 
     SWSS_LOG_NOTICE("STP %s bpdu guard %s", if_name, enabled ? "yes" : "no");
 }
@@ -513,7 +525,7 @@ void StpSync::delStpInterface(char * if_name)
     std::string ifName(if_name);
     std::string key = ifName;
 
-    m_stpInterfaceTable.del(key);
+    m_stpPortTable.del(key);
 
     SWSS_LOG_NOTICE("STP interface %s delete", if_name);
 }
@@ -527,7 +539,7 @@ void StpSync::updatePortFast(char * if_name, bool enabled)
     FieldValueTuple fs("port_fast", (enabled ? "yes" : "no"));
     fvVector.push_back(fs);
 
-    m_stpInterfaceTable.set(key, fvVector);
+    m_stpPortTable.set(key, fvVector);
 
     SWSS_LOG_NOTICE("STP %s port fast %s", if_name, enabled ? "yes" : "no");
 }
@@ -535,9 +547,9 @@ void StpSync::updatePortFast(char * if_name, bool enabled)
 void StpSync::clearAllStpAppDbTables(void)
 {
     m_stpVlanTable.clear();
-    m_stpVlanInterfaceTable.clear();
+    m_stpVlanPortTable.clear();
     //m_stpVlanInstanceTable.clear();
-    m_stpInterfaceTable.clear();
+    m_stpPortTable.clear();
     //m_stpPortStateTable.clear();
     //m_appVlanMemberTable.clear();
     m_stpFastAgeFlushTable.clear();

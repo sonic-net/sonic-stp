@@ -1,6 +1,18 @@
 /*
- * Copyright 2019 Broadcom. All rights reserved. 
- * The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
+ * Copyright 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or
+ * its subsidiaries.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef __STP_DBSYNC__
@@ -64,13 +76,13 @@ typedef struct
 
     uint8_t         clear_stats;
     uint32_t        modified_fields;
-} STP_VLAN_INTF_TABLE;
+} STP_VLAN_PORT_TABLE;
 
 extern void stpsync_add_vlan_to_instance(uint16_t vlan_id, uint16_t instance);
 extern void stpsync_del_vlan_from_instance(uint16_t vlan_id, uint16_t instance);
 extern void stpsync_update_stp_class(STP_VLAN_TABLE * stp_vlan);
 extern void stpsync_del_stp_class(uint16_t vlan_id);
-extern void stpsync_update_port_class(STP_VLAN_INTF_TABLE * stp_vlan_intf);
+extern void stpsync_update_port_class(STP_VLAN_PORT_TABLE * stp_vlan_intf);
 extern void stpsync_del_port_class(char * if_name, uint16_t vlan_id);
 extern void stpsync_update_port_state(char * ifName, uint16_t instance, uint8_t state);
 extern void stpsync_del_port_state(char * ifName, uint16_t instance);
