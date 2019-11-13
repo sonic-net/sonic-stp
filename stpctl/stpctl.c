@@ -388,8 +388,7 @@ int send_command(int argc, char **argv)
         default:
         {
             stpout("invalid command %d\n", cmd_type);
-            close(stpd_fd);
-            exit(0);
+            return -1;
         }
     }
 

@@ -38,7 +38,6 @@
 #include <assert.h>
 #include <linux/filter.h>
 #include <linux/if_packet.h>
-/*#include <net/if.h>*/
 #include "l2.h"
 #include "stp_timer.h"
 #include "stp_intf.h"
