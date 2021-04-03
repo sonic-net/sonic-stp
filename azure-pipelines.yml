@@ -45,7 +45,6 @@ stages:
       displayName: "Download sonic swss common deb packages"
 
     - script: |
-
         set -ex
 
         #install HIREDIS
@@ -59,8 +58,8 @@ stages:
             libnl-nf-3-dev
 
         #install libswsscommon
-        sudo dpkg -i sonic-swsw-common/libswsscommon_1.0.0_${{ parameters.arch }}.deb
-        sudo dpkg -i sonic-swss-common//libswsscommon-dev_1.0.0_${{ parameters.arch }}.deb
+        sudo dpkg -i sonic-swsw-common/libswsscommon_1.0.0_amd64.deb
+        sudo dpkg -i sonic-swss-common//libswsscommon-dev_1.0.0_amd64.deb
 
         ./autogen.sh
 
