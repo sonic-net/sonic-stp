@@ -17,57 +17,33 @@ pr:
 
 stages:
 - stage: Build
+
   jobs:
-  - job:
-    displayName: "build"
-    timeoutInMinutes: 60
+  - template: .azure-pipelines/build-template.yml
+    parameters:
+      arch: amd64
+      sonic_slave: sonic-slave-buster
+      swss_common_artifact_name: sonic-swss-common
+      artifact_name: sonic-stp
 
-    pool:
-      vmImage: ubuntu-20.04
+- stage: BuildArm
+  dependsOn: Build
+  condition: succeeded('Build')
+  jobs:
+  - template: .azure-pipelines/build-template.yml
+    parameters:
+      arch: armhf
+      timeout: 180
+      pool: sonicbld
+      sonic_slave: sonic-slave-buster-armhf
+      swss_common_artifact_name: sonic-swss-common.armhf
+      artifact_name: sonic-stp.armhf
 
-    container:
-      image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster:latest
-
-    steps:
-    - checkout: self
-      clean: true
-      submodules: recursive
-      displayName: 'Checkout code'
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        source: specific
-        project: build
-        pipeline: 9
-        artifact: sonic-swss-common
-        runVersion: 'latestFromBranch'
-        runBranch: 'refs/heads/master'
-      displayName: "Download sonic swss common deb packages"
-
-    - script: |
-        set -ex
-        pwd
-        ls -l ../
-
-        #install HIREDIS
-        sudo apt-get install -y libhiredis0.14 libhiredis-dev
-
-        # Install libnl3
-        sudo apt-get install -qq -y \
-            libnl-3-dev \
-            libnl-genl-3-dev \
-            libnl-route-3-dev \
-            libnl-nf-3-dev
-
-        #install libswsscommon
-        sudo dpkg -i ../libswsscommon_1.0.0_amd64.deb
-        sudo dpkg -i ../libswsscommon-dev_1.0.0_amd64.deb
-
-        ./autogen.sh
-
-        dpkg-buildpackage -rfakeroot -us -uc -b -j$(nproc) && cp ../*.deb $(Build.ArtifactStagingDirectory)/
-      displayName: "Build"
-
-    - publish: $(Build.ArtifactStagingDirectory)/
-      artifact: sonic-stp
-      displayName: "Archive artifacts"
+  - template: .azure-pipelines/build-template.yml
+    parameters:
+      arch: arm64
+      timeout: 180
+      pool: sonicbld
+      sonic_slave: sonic-slave-buster-arm64
+      swss_common_artifact_name: sonic-swss-common.arm64
+      artifact_name: sonic-stp.arm64
