@@ -68,8 +68,8 @@ jobs:
           libnl-nf-3-dev
 
       #install libswsscommon
-      sudo dpkg -i ../libswsscommon_1.0.0_*.deb
-      sudo dpkg -i ../libswsscommon-dev_1.0.0_*.deb
+      sudo dpkg -i ../libswsscommon_1.0.0_${{ parameters.arch }}.deb
+      sudo dpkg -i ../libswsscommon-dev_1.0.0_${{ parameters.arch }}.deb
     displayName: "Install dependency"
 
   - checkout: self
