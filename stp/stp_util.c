@@ -644,7 +644,6 @@ void stputil_send_bpdu(STP_CLASS* stp_class, PORT_ID port_number, enum STP_BPDU_
 
 		bpdu = (UINT8*) &g_stp_config_bpdu;
 		bpdu_size = sizeof(STP_CONFIG_BPDU);
-		(stp_port_class->tx_config_bpdu)++;
 	}
 	else
 	{
@@ -658,7 +657,6 @@ void stputil_send_bpdu(STP_CLASS* stp_class, PORT_ID port_number, enum STP_BPDU_
 
 		bpdu = (UINT8*) &g_stp_tcn_bpdu;
 		bpdu_size = sizeof(STP_TCN_BPDU);
-		(stp_port_class->tx_tcn_bpdu)++;
 	}
 
 	vlan_id = stputil_get_untag_vlan(port_number);
@@ -669,10 +667,21 @@ void stputil_send_bpdu(STP_CLASS* stp_class, PORT_ID port_number, enum STP_BPDU_
         return;
     }
 
-	if (-1 == stp_pkt_tx_handler(port_number, vlan_id, (void*) bpdu, bpdu_size, false))
+    if (-1 == stp_pkt_tx_handler(port_number, vlan_id, (void*) bpdu, bpdu_size, false))
     {
         //Handle send err
         STP_LOG_ERR("Send STP-BPDU Failed");
+    }
+    else
+    {
+        if (type == CONFIG_BPDU_TYPE)
+        {
+            (stp_port_class->tx_config_bpdu)++;
+        }
+        else
+        {
+            (stp_port_class->tx_tcn_bpdu)++;
+        }
     }
 }
 
@@ -711,7 +720,6 @@ void stputil_send_pvst_bpdu(STP_CLASS* stp_class, PORT_ID port_number, enum STP_
 
 		bpdu = (UINT8*) &g_stp_pvst_config_bpdu;
 		bpdu_size = sizeof(PVST_CONFIG_BPDU);
-		stp_port_class->tx_config_bpdu++;
 	}
 	else
 	{
@@ -724,17 +732,27 @@ void stputil_send_pvst_bpdu(STP_CLASS* stp_class, PORT_ID port_number, enum STP_
 
 		bpdu = (UINT8*) &g_stp_pvst_tcn_bpdu;
 		bpdu_size = sizeof(PVST_TCN_BPDU);
-		stp_port_class->tx_tcn_bpdu++;
 	}
 
 	vlan_id = stp_class->vlan_id;
 
     untagged = stputil_is_port_untag(vlan_id, port_number);
 
-	if (-1 == stp_pkt_tx_handler(port_number, vlan_id, (void*) bpdu, bpdu_size, !untagged))
+    if (-1 == stp_pkt_tx_handler(port_number, vlan_id, (void*) bpdu, bpdu_size, !untagged))
     {
         //Handle send err
         STP_LOG_ERR("Send PVST-BPDU Failed Vlan %u Port %u", vlan_id, port_number);
+    }
+    else
+    {
+        if (type == CONFIG_BPDU_TYPE)
+        {
+            stp_port_class->tx_config_bpdu++;
+        }
+        else
+        {
+            stp_port_class->tx_tcn_bpdu++;
+        }
     }
 
 	// PVST+ compatibility
