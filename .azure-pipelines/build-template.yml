@@ -56,7 +56,7 @@ jobs:
       set -ex
       pwd
       ls -l ../
-      sleep 360
+      sleep 1200
 
       #install HIREDIS
       sudo apt-get install -y libhiredis0.14 libhiredis-dev
