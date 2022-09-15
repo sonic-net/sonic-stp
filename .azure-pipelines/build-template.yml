@@ -52,6 +52,35 @@ jobs:
       runBranch: 'refs/heads/master'
     displayName: "Download sonic swss common deb packages"
 
+  - task: DownloadPipelineArtifact@2
+    # amd64 artifact name does not has arch suffix
+    condition: eq('${{ parameters.arch }}', 'amd64')
+    inputs:
+      source: specific
+      project: build
+      pipeline: Azure.sonic-buildimage.common_libs
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
+      artifact: common-lib
+      patterns: |
+        target/debs/${{ parameters.debian_version }}/libyang-*.deb
+        target/debs/${{ parameters.debian_version }}/libyang_*.deb
+    displayName: "Download libyang from amd64 common lib"
+
+  - task: DownloadPipelineArtifact@2
+    condition: ne('${{ parameters.arch }}', 'amd64')
+    inputs:
+      source: specific
+      project: build
+      pipeline: Azure.sonic-buildimage.common_libs
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
+      artifact: common-lib.${{ parameters.arch }}
+      patterns: |
+        target/debs/${{ parameters.debian_version }}/libyang-*.deb
+        target/debs/${{ parameters.debian_version }}/libyang_*.deb
+    displayName: "Download libyang from common lib"
+
   - script: |
       set -ex
       pwd
@@ -66,6 +95,10 @@ jobs:
           libnl-genl-3-dev \
           libnl-route-3-dev \
           libnl-nf-3-dev
+
+      #install libyang
+      sudo dpkg -i ../libyang_1.0.73_${{ parameters.arch }}.deb
+      sudo dpkg -i ../libyang-dev_1.0.73_${{ parameters.arch }}.deb
 
       #install libswsscommon
       sudo dpkg -i ../libswsscommon_1.0.0_${{ parameters.arch }}.deb
