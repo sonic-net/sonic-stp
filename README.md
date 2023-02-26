@@ -7,6 +7,10 @@ Contains source code for the implementation of SONiC PVSTP. Based on the HLD htt
 
 See the [contributors guide](https://github.com/sonic-net/SONiC/wiki/Becoming-a-contributor) for information about how to contribute.
 
+All contributors must sign an [Individual Contributor License Agreement (ICLA)](https://docs.linuxfoundation.org/lfx/easycla/v2-current/contributors/individual-contributor) before 
+contributions can be accepted. This process is managed by the [Linux Foundation - EasyCLA](https://easycla.lfx.linuxfoundation.org/) and automated
+via a GitHub bot. If the contributor has not yet signed a CLA, the bot will create a comment on the pull request containing a link to electronically sign the CLA.
+
 ### GitHub Workflow
 
 We're following basic GitHub Flow. If you have no idea what we're talking about, check out [GitHub's official guide](https://guides.github.com/introduction/flow/). Note that merge is only performed by the repository maintainer.
