@@ -42,6 +42,7 @@ int applog_write(int priority, const char *fmt, ...);
 
 #define APP_LOG_LEVEL_MIN             (APP_LOG_LEVEL_EMERG)
 #define APP_LOG_LEVEL_DEFAULT         (APP_LOG_LEVEL_ERR)
+//#define APP_LOG_LEVEL_DEFAULT         (APP_LOG_LEVEL_DEBUG)
 #define APP_LOG_LEVEL_MAX             (APP_LOG_LEVEL_DEBUG)
 
 #define APP_LOG_STATUS_OK             (0)

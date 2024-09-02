@@ -17,6 +17,7 @@
 
 #include "stp_inc.h"
 #include "stp_main.h"
+#include <stdio.h>
 
 MAC_ADDRESS g_stp_base_mac_addr;
 
@@ -73,7 +74,6 @@ struct event *stpmgr_libevent_create(struct event_base *base,
             STP_LOG_DEBUG("base : %p, sock : %d, flags : %x, cb_fn : %p", base, sock, flags, cb_fn);
             if (tv)
                 STP_LOG_DEBUG("tv.sec : %u, tv.usec : %u", tv->tv_sec, tv->tv_usec);
-
             return ev;
         }
     }
@@ -115,7 +115,6 @@ void stpmgr_initialize_stp_class(STP_CLASS *stp_class, VLAN_ID vlan_id)
 	stp_index = GET_STP_INDEX(stp_class);
 
 	stp_class->vlan_id = vlan_id;
-	
 	stputil_set_bridge_priority(&stp_class->bridge_info.bridge_id, STP_DFLT_PRIORITY, vlan_id);
 	NET_TO_HOST_MAC(&stp_class->bridge_info.bridge_id.address, &g_stp_base_mac_addr);
 
@@ -1125,8 +1124,6 @@ static bool stpmgr_config_fastspan(PORT_ID port_id, bool enable)
 
 	if (enable)
 	{
-		if(is_member(g_fastspan_config_mask, port_id))
-		    return ret;
         set_mask_bit(g_fastspan_config_mask, port_id);
         set_mask_bit(g_fastspan_mask, port_id);
         stpsync_update_port_fast(stp_intf_get_port_name(port_id), true);
@@ -1490,7 +1487,6 @@ static void stpmgr_process_bridge_config_msg(void *msg)
             pmsg->opcode, pmsg->stp_mode, pmsg->rootguard_timeout, pmsg->base_mac_addr[0], 
             pmsg->base_mac_addr[1], pmsg->base_mac_addr[2], pmsg->base_mac_addr[3], 
             pmsg->base_mac_addr[4], pmsg->base_mac_addr[5]);
-
     if (pmsg->opcode == STP_SET_COMMAND)
     {
         stp_global.enable = true;

@@ -16,6 +16,8 @@
  */
 
 #include "stp_inc.h"
+#include <stdio.h>
+#include <ctype.h>
 
 int stp_intf_get_netlink_fd()
 {
@@ -421,10 +423,14 @@ bool stp_intf_update_po_members(netlink_db_t * if_db, INTERFACE_NODE * node)
     }
 }
 
+
 INTERFACE_NODE * stp_intf_update_intf_db(netlink_db_t *if_db, uint8_t is_add, bool init_in_prog, bool eth_if)
 {
     INTERFACE_NODE *node = NULL;
     uint32_t port_id = 0;
+    char *ifname_trim;
+    char num_str[ STP_ETH_NAME_PREFIX_LEN ];
+    int index=0, i;
 
     if(is_add)
     {
@@ -438,7 +444,24 @@ INTERFACE_NODE * stp_intf_update_intf_db(netlink_db_t *if_db, uint8_t is_add, bo
             /* Update port id */
             if(eth_if)
             {
-                port_id = strtol(((char *)if_db->ifname + STP_ETH_NAME_PREFIX_LEN), NULL, 10);
+                //Ensure that Inerface name contains min STP_ETH_NAME_PREFIX_LEN chars
+                if (strlen((char *)if_db->ifname) < STP_ETH_NAME_PREFIX_LEN)
+                {
+                    STP_LOG_ERR("Port id update failed for invalid interface name: %s", if_db->ifname);
+                    return node;
+                }
+                // Perform the conversion using strtol
+                ifname_trim =  (char *)if_db->ifname + STP_ETH_NAME_PREFIX_LEN;
+                memset(num_str,0, sizeof(num_str));
+                for (i=0; ifname_trim[i] != '\0' && index < STP_ETH_NAME_PREFIX_LEN; i++)
+                {
+                    if (isdigit(ifname_trim[i]) )
+                    {
+                        num_str[index++] = ifname_trim[i];
+                    }
+                }
+                num_str[index] = '\0';
+                port_id = strtol(num_str, NULL, 10);
                 node->port_id = port_id;
                 
                 /* Derive Max Port */

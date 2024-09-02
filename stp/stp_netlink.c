@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-#include "stp_netlink.h"
+#include <stp_netlink.h>
 
+stp_netlink_cb_ptr *stp_netlink_cb;
 int stp_intf_get_netlink_fd();
 
 

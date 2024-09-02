@@ -16,6 +16,9 @@
  */
 
 #include "stp_main.h"
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 STPD_CONTEXT stpd_context;
 
@@ -32,7 +35,7 @@ int stpd_ipc_init()
         STP_LOG_ERR("ipc socket error %s", strerror(errno));
         return -1;
     }
-
+    
     // setup socket address structure
     memset(&sa, 0, sizeof(struct sockaddr_un));
     sa.sun_family = AF_UNIX;
@@ -54,7 +57,7 @@ int stpd_ipc_init()
         return -1;
     }
 
-    STP_LOG_DEBUG("ipc init done");
+    STP_LOG_DEBUG("stpd: ipc init done");
 
     return 0;
 }
