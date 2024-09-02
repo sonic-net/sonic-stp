@@ -16,11 +16,25 @@
  */
 
 #include <iostream>
+#include "swss/logger.h"
+
+using namespace std;
 
 extern "C" void stpd_main();
 
 int main(int argc, char **argv)
 {
+
+    swss::Logger::getInstance().setMinPrio(swss::Logger::SWSS_DEBUG);
+    SWSS_LOG_ENTER();
+
+    swss::Logger::getInstance().setMinPrio(swss::Logger::SWSS_NOTICE);
+
+    swss::Logger::linkToDbNative("stpd");
+
+
+    SWSS_LOG_NOTICE("--- Starting stpd ---");
+
     stpd_main();
     return 0;
 }

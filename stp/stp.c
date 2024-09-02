@@ -881,9 +881,12 @@ void send_config_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
 	
 
 	if (!g_sstp_enabled)
+    {
 		stputil_send_pvst_bpdu(stp_class, port_number, CONFIG_BPDU_TYPE);
-	else
+    } else
+    {
 		stputil_send_bpdu(stp_class, port_number, CONFIG_BPDU_TYPE);
+    }
 }
 
 void send_tcn_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
@@ -896,7 +899,10 @@ void send_tcn_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
 		return;
 	
 	if (!g_sstp_enabled)
+    {
 		stputil_send_pvst_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
-	else
+    } else
+    {
 		stputil_send_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
+    }
 }
