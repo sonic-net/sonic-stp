@@ -21,8 +21,6 @@
 #include <linux/if.h>
 #include <chrono>
 #include "logger.h"
-#include "dbconnector.h"
-#include "producerstatetable.h"
 #include "stp_sync.h"
 #include "stp_dbsync.h"
 #include <algorithm> 
@@ -48,94 +46,94 @@ StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
 
 DBConnector db(APPL_DB, DBConnector::DEFAULT_UNIXSOCKET, 0);
 DBConnector cfgDb(CONFIG_DB, DBConnector::DEFAULT_UNIXSOCKET, 0);
-StpSync sync(&db, &cfgDb);
+StpSync stpsync(&db, &cfgDb);
 
 extern "C" {
 
     void stpsync_add_vlan_to_instance(uint16_t vlan_id, uint16_t instance)
     {
-        sync.addVlanToInstance(vlan_id, instance);
+        stpsync.addVlanToInstance(vlan_id, instance);
     }
     
     void stpsync_del_vlan_from_instance(uint16_t vlan_id, uint16_t instance)
     {
-        sync.delVlanFromInstance(vlan_id, instance);
+        stpsync.delVlanFromInstance(vlan_id, instance);
     }
     
     void stpsync_update_stp_class(STP_VLAN_TABLE * stp_vlan)
     {
-        sync.updateStpVlanInfo(stp_vlan);
+        stpsync.updateStpVlanInfo(stp_vlan);
     }
     
     void stpsync_del_stp_class(uint16_t vlan_id)
     {
-        sync.delStpVlanInfo(vlan_id);
+        stpsync.delStpVlanInfo(vlan_id);
     }
     
     void stpsync_update_port_class(STP_VLAN_PORT_TABLE * stp_vlan_intf)
     {
-        sync.updateStpVlanInterfaceInfo(stp_vlan_intf);
+        stpsync.updateStpVlanInterfaceInfo(stp_vlan_intf);
     }
 
     void stpsync_del_port_class(char * if_name, uint16_t vlan_id)
     {
-        sync.delStpVlanInterfaceInfo(if_name, vlan_id);
+        stpsync.delStpVlanInterfaceInfo(if_name, vlan_id);
     }
 
     void stpsync_update_port_state(char * ifName, uint16_t instance, uint8_t state)
     {
-        sync.updateStpPortState(ifName, instance, state);
+        stpsync.updateStpPortState(ifName, instance, state);
     }
     
     void stpsync_del_port_state(char * ifName, uint16_t instance)
     {
-        sync.delStpPortState(ifName, instance);
+        stpsync.delStpPortState(ifName, instance);
     }
    
 #if 0
     void stpsync_update_vlan_port_state(char * ifName, uint16_t vlan_id, uint8_t state)
     {
-        sync.updateStpVlanPortState(ifName, vlan_id, state);
+        stpsync.updateStpVlanPortState(ifName, vlan_id, state);
     }
     
     void stpsync_del_vlan_port_state(char * ifName, uint16_t vlan_id)
     {
-        sync.delStpVlanPortState(ifName, vlan_id);
+        stpsync.delStpVlanPortState(ifName, vlan_id);
     }
 #endif
     void stpsync_update_fastage_state(uint16_t vlan_id, bool add)
     {
-        sync.updateStpVlanFastage(vlan_id, add);
+        stpsync.updateStpVlanFastage(vlan_id, add);
     }
 
     void stpsync_update_port_admin_state(char * ifName, bool up, bool physical)
     {
-        sync.updatePortAdminState(ifName, up, physical);
+        stpsync.updatePortAdminState(ifName, up, physical);
     }
     
     uint32_t stpsync_get_port_speed(char * ifName)
     {
-        return sync.getPortSpeed(ifName);
+        return stpsync.getPortSpeed(ifName);
     }
     
     void stpsync_update_bpdu_guard_shutdown(char * ifName, bool enabled)
     {
-        sync.updateBpduGuardShutdown(ifName, enabled);
+        stpsync.updateBpduGuardShutdown(ifName, enabled);
     }
     
     void stpsync_update_port_fast(char * ifName, bool enabled)
     {
-        sync.updatePortFast(ifName, enabled);
+        stpsync.updatePortFast(ifName, enabled);
     }
     
     void stpsync_del_stp_port(char * ifName)
     {
-        sync.delStpInterface(ifName);
+        stpsync.delStpInterface(ifName);
     }
 
     void stpsync_clear_appdb_stp_tables(void)
     {
-        sync.clearAllStpAppDbTables();
+        stpsync.clearAllStpAppDbTables();
     }
 }
 
