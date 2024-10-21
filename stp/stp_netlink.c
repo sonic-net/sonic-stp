@@ -85,7 +85,7 @@ int stp_netlink_init(stp_netlink_cb_ptr *fn)
         STP_LOG_ERR("nl_fd BIND Failed : %s", strerror(errno));
         return -1;
     }
-
+    extern stp_netlink_cb_ptr *stp_netlink_cb;
     stp_netlink_cb = fn;
 
     return nl_fd;
