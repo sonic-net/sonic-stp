@@ -50,9 +50,19 @@ jobs:
       artifact: ${{ parameters.swss_common_artifact_name }}
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
+    displayName: "Download sonic swss common deb packages"
+
+   - task: DownloadPipelineArtifact@2
+    inputs:
+      source: specific
+      project: build
+      pipeline: 142
+      artifact: sonic-buildimage.vs
+      runVersion: 'latestFromBranch'
+      runBranch: 'refs/heads/master'
       patterns: |
         target/debs/bookworm/libnl*.deb
-    displayName: "Download sonic swss common deb packages"
+    displayName: "Download deb packages"
 
   - script: |
       set -ex
