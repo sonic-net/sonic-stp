@@ -13,7 +13,7 @@ endif
 stpd_SOURCES = stpd_main.cpp stpsync/stp_sync.cpp
 
 stpd_CPPFLAGS = $(DBGFLAGS) $(AM_CFLAGS) $(CFLAGS_COMMON) $(COV_CFLAGS)
-stpd_LDADD = -lhiredis -lnl-genl-3 -lnl-3 -lswsscommon \
+stpd_LDADD = -lhiredis -lnl-genl-3 -lnl-3 libnl-nf-3-dev -lswsscommon \
 			 $(LIBDAEMON_LIBS) \
 	         lib/libcommonstp.a \
 	         stp/libstp.a \
