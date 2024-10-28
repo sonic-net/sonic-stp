@@ -74,10 +74,10 @@ jobs:
 
       # Install libnl3
       sudo apt-get -y purge libnl-3-dev libnl-route-3-dev
-      sudo dpkg -i ../target/debs/bookworm/libnl-3-200_*.deb
-      sudo dpkg -i ../target/debs/bookworm/libnl-genl-3-200_*.deb
-      sudo dpkg -i ../target/debs/bookworm/libnl-nf-3-200_*.deb
-      sudo dpkg -i ../target/debs/bookworm/libnl-route-3-200_*.deb
+      sudo dpkg -i ../target/debs/bookworm/libnl-3-dev_*.deb
+      sudo dpkg -i ../target/debs/bookworm/libnl-genl-3-dev_*.deb
+      sudo dpkg -i ../target/debs/bookworm/libnl-route-3-dev_*.deb
+      sudo dpkg -i ../target/debs/bookworm/libnl-nf-3-dev_*.deb
       sudo apt-get install -qq -y \
           libnl-3-dev \
           libnl-genl-3-dev \
