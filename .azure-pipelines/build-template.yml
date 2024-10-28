@@ -56,13 +56,13 @@ jobs:
     inputs:
       source: specific
       project: build
-      pipeline: 142
+      pipeline: Azure.sonic-stp
       artifact: sonic-buildimage.vs
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
       patterns: |
         target/debs/bookworm/libnl*.deb
-    displayName: "Download deb packages"
+    displayName: "Download bookworm debs"
 
   - script: |
       set -ex
