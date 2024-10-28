@@ -56,7 +56,7 @@ jobs:
     inputs:
       source: specific
       project: build
-      pipeline: Azure.sonic-stp
+      pipeline: 142
       artifact: sonic-buildimage.vs
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
