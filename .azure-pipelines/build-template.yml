@@ -50,6 +50,8 @@ jobs:
       artifact: ${{ parameters.swss_common_artifact_name }}
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
+      patterns: |
+        target/debs/bookworm/libnl*.deb
     displayName: "Download sonic swss common deb packages"
 
   - script: |
