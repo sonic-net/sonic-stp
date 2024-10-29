@@ -61,8 +61,8 @@ jobs:
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
       patterns: |
-        target/debs/bullseye/libnl*.deb
-    displayName: "Download bullseye debs"
+        target/debs/bookworm/libnl*.deb
+    displayName: "Download bookworm debs"
 
   - script: |
       set -ex
@@ -74,10 +74,10 @@ jobs:
 
       # Install libnl3
       sudo apt-get -y purge libnl-3-dev libnl-route-3-dev
-      sudo dpkg -i ../target/debs/bullseye/libnl-3-200_*.deb
-      sudo dpkg -i ../target/debs/bullseye/libnl-genl-3-200_*.deb
-      sudo dpkg -i ../target/debs/bullseye/libnl-route-3-200_*.deb
-      sudo dpkg -i ../target/debs/bullseye/libnl-nf-3-200_*.deb
+      sudo dpkg -i ../target/debs/bookworm/libnl-3-200_*.deb
+      sudo dpkg -i ../target/debs/bookworm/libnl-genl-3-200_*.deb
+      sudo dpkg -i ../target/debs/bookworm/libnl-route-3-200_*.deb
+      sudo dpkg -i ../target/debs/bookworm/libnl-nf-3-200_*.deb
       #sudo apt-get install -qq -y libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev
 
       #install libswsscommon
