@@ -61,6 +61,7 @@ jobs:
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
       patterns: |
+        target/debs/bookworm/libyang*.deb
         target/debs/bookworm/libnl*.deb
     displayName: "Download bookworm debs"
 
@@ -71,6 +72,9 @@ jobs:
 
       #install HIREDIS
       sudo apt-get install -y libhiredis0.14 libhiredis-dev
+
+      # LIBYANG
+      sudo dpkg -i ../target/debs/bookworm/libyang*1.0.73*.deb
 
       # Install libnl3
       sudo apt-get -y purge libnl-3-dev libnl-route-3-dev
