@@ -23,7 +23,6 @@ extern struct STPD_CONTEXT stpd_context;
 extern STP_GLOBAL stp_global;
 extern uint32_t g_max_stp_port;
 extern uint16_t g_stp_bmp_po_offset;
-struct timeval g_stp_100ms_tv;
 extern MAC_ADDRESS bridge_group_address;
 extern MAC_ADDRESS pvst_bridge_group_address;
 extern MAC_ADDRESS g_stp_base_mac_addr;

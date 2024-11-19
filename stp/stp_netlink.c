@@ -18,7 +18,7 @@
 #include "stp_netlink.h"
 
 int stp_intf_get_netlink_fd();
-
+stp_netlink_cb_ptr *stp_netlink_cb;
 
 int stp_set_sock_buf_size(int sock, int optname, int size)
 {
