@@ -12,6 +12,8 @@ parameters:
   values:
   - sonicbld
   - default
+  - sonicbld-armhf
+  - sonicbld-arm64
   default: default
 
 - name: timeout
