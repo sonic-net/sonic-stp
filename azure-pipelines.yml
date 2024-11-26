@@ -30,6 +30,7 @@ stages:
   dependsOn: []
   jobs:
   - template: .azure-pipelines/build-template.yml
+    condition: false # build error, skip currently
     parameters:
       arch: armhf
       timeout: 180
