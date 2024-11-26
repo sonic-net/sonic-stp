@@ -58,8 +58,11 @@ jobs:
     inputs:
       source: specific
       project: build
-      pipeline: 142
-      artifact: sonic-buildimage.vs
+      pipeline: 465
+      ${{ if eq(parameters.arch, 'amd64') }}:
+        artifact: common-lib
+      ${{ else }}:
+        artifact: common-lib.${{ parameters.arch }}
       runVersion: 'latestFromBranch'
       runBranch: 'refs/heads/master'
       patterns: |
