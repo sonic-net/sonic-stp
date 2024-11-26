@@ -28,7 +28,6 @@ stages:
 
 - stage: BuildArm
   dependsOn: []
-  condition: arm build never pass. Disable it.
   jobs:
   - template: .azure-pipelines/build-template.yml
     parameters:
