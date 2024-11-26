@@ -27,8 +27,8 @@ stages:
       artifact_name: sonic-stp
 
 - stage: BuildArm
-  dependsOn: Build
-  condition: false # arm build never pass. Disable it.
+  dependsOn: []
+  condition: arm build never pass. Disable it.
   jobs:
   - template: .azure-pipelines/build-template.yml
     parameters:
