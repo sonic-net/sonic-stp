@@ -74,6 +74,7 @@ jobs:
       set -ex
       ls -l ../
       pwd
+      find /usr/lib -name libevent.a
 
       #install HIREDIS
       sudo apt-get install -y libhiredis0.14 libhiredis-dev
