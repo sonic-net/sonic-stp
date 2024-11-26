@@ -82,7 +82,7 @@ jobs:
       sudo dpkg -i ../target/debs/bookworm/libyang*1.0.73*.deb
 
       # Install libnl3
-      sudo apt-get -y purge libnl-3-dev libnl-route-3-dev
+      sudo apt-get -y purge libnl-3-dev libnl-route-3-dev || true
       sudo dpkg -i ../target/debs/bookworm/libnl-3-200_*.deb
       sudo dpkg -i ../target/debs/bookworm/libnl-genl-3-200_*.deb
       sudo dpkg -i ../target/debs/bookworm/libnl-route-3-200_*.deb
