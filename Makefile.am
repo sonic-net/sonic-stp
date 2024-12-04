@@ -18,6 +18,6 @@ stpd_LDADD = -lhiredis -lnl-genl-3 -lnl-3 -lswsscommon \
 	         lib/libcommonstp.a \
 	         stp/libstp.a \
 	         lib/libcommonstp.a \
-	         /usr/lib/x86_64-linux-gnu/libevent.a \
+	         /usr/lib/*/libevent.a \
 			 $(COV_LDFLAGS)
 

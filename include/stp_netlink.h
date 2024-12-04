@@ -85,7 +85,7 @@ typedef struct netlink_db_s
 }netlink_db_t;
 
 typedef void stp_netlink_cb_ptr (netlink_db_t *if_db, uint8_t add, bool init_in_prog);
-stp_netlink_cb_ptr *stp_netlink_cb;
+extern stp_netlink_cb_ptr *stp_netlink_cb;
 
 #define PRINT_MAC_FORMAT "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx"
 #define PRINT_MAC_VAL(x) *(char *)x,*((char *)x)+1,*((char *)x)+2,*((char *)x)+3,*((char *)x)+4,*((char *)x)+5

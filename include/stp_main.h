@@ -128,9 +128,6 @@ typedef struct
 #define STPD_INCR_PKT_COUNT(x, y)   (g_stpd_intf_stats[x]->y)++
 #define STPD_GET_PKT_COUNT(x, y)    (g_stpd_intf_stats[x]->y)
 
-struct tm *g_tm;
-struct timespec g_ts;
-
 typedef struct
 {
     uint16_t no_of_sockets;
