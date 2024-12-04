@@ -9,4 +9,4 @@ DBGFLAGS = -g -DNDEBUG
 endif
 
 libcommonstp_a_CFLAGS = -D_GNU_SOURCE $(COV_CFLAGS)
-libcommonstp_a_SOURCES = avl.c bitmap.c applog.c
+libcommonstp_a_SOURCES = avl.c bitmap.c applog.c vlan_util.c

@@ -69,3 +69,19 @@ bool get_timer_value(TIMER *timer, UINT32 *value_in_ticks)
 	*value_in_ticks = timer->value;
 	return true;
 }
+
+void stptimer_100ms_tick(evutil_socket_t fd, short what, void *arg)
+{
+    int ret;
+
+    g_stpd_stats_libev_timer++;
+
+    if (STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
+    {
+        stptimer_tick();
+    }
+    else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+    {
+        mstputil_timer_tick();
+    }
+}

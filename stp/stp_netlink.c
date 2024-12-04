@@ -231,7 +231,6 @@ static int stp_netlink_recv(int nl_fd, bool read_all)
             }
             else
             {
-                //TODO: 
                 //This is a very unlikely condition to hit.
                 //STP_NETLINK_APPL_MAX_BUF_SIZE needs to be revisited only if we hit the error
                 STP_LOG_CRITICAL("Netlink msg len[%u] is too big", len);
@@ -405,5 +404,3 @@ void stp_netlink_events_cb (evutil_socket_t fd, short what, void *arg)
         STP_LOG_ERR("Invalid event : %x",what);
 
 }
-
-
