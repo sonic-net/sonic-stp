@@ -528,10 +528,6 @@ void make_blocking(STP_CLASS *stp_class, PORT_ID port_number)
 			{
 				topology_change_detection(stp_class);
 				stplog_topo_change(stp_class, port_number, STP_MAKE_BLOCKING);
-				if (stp_port_class->state == FORWARDING) {
-                    //TODO:Find Alternate for SNMP_TRAP
-                    //send_stp_topo_change_trap();
-				}
 			}
 			// fall thru
 
@@ -879,24 +875,15 @@ void send_config_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
 {
 	STP_PORT_CLASS *stp_port_class = GET_STP_PORT_CLASS(stp_class, port_number);
 	
-
-	if (!g_sstp_enabled)
-		stputil_send_pvst_bpdu(stp_class, port_number, CONFIG_BPDU_TYPE);
-	else
-		stputil_send_bpdu(stp_class, port_number, CONFIG_BPDU_TYPE);
+	stputil_send_pvst_bpdu(stp_class, port_number, CONFIG_BPDU_TYPE);
 }
 
 void send_tcn_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
 {
-	
 	STP_PORT_CLASS *stp_port_class = GET_STP_PORT_CLASS(stp_class, port_number);
 	
-
 	if (stptimer_is_active(&stp_port_class->root_protect_timer))
 		return;
 	
-	if (!g_sstp_enabled)
-		stputil_send_pvst_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
-	else
-		stputil_send_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
+	stputil_send_pvst_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
 }

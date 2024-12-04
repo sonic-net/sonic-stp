@@ -369,7 +369,19 @@ void stp_pkt_rx_handler (evutil_socket_t fd, short what, void *arg)
     if (STP_DEBUG_BPDU_RX(vlan_id, intf_node->port_id))
         stp_pkt_dump(intf_node, vlan_id, pkt, packet_len, true);
 
-    stpmgr_process_rx_bpdu(vlan_id, intf_node->port_id, &pkt[0]);
+    if (STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
+    { 
+        stpmgr_process_rx_bpdu(vlan_id, intf_node->port_id, &pkt[0]);
+    }
+    else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+    {
+        if (stpmgr_protect_process(intf_node->port_id, vlan_id))
+            return;
+        if (pkt[1] == 128)
+        {
+             mstpmgr_rx_bpdu(vlan_id, intf_node->port_id, &pkt[0], packet_len);
+        }
+    }
 
     return;
 }

@@ -19,9 +19,6 @@
 
 FILE *dbgfp = NULL;
 
-#define STP_DUMP_START      dbgfp = fopen("/var/log/stp_dmp.log", "w+")
-#define STP_DUMP(fmt, ...)  do {fprintf(dbgfp, fmt, ##__VA_ARGS__); fflush(dbgfp);}while(0)
-#define STP_DUMP_STOP       fclose(dbgfp)
 
 #define STP_TIMER_STRING(timer_ptr) \
         (is_timer_active(timer_ptr) ? "ACTIVE" : "INACTIVE")

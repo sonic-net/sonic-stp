@@ -1402,6 +1402,91 @@ int mask_to_string(BITMAP_T *bmp, uint8_t *str, uint32_t maxlen)
     return len;
 }
 
+int mask_to_string2(BITMAP_T *bmp, uint8_t *str, uint32_t maxlen)
+{
+    if (!bmp || !bmp->arr || (maxlen < 5) || !str)
+    {
+        STP_LOG_ERR("Invalid inputs");
+        return -1;
+    }
+
+    *str = '\0';
+
+    if(is_mask_clear(bmp))
+    {
+        STP_LOG_DEBUG("BMP is Clear");
+        return -1;
+    }
+
+    int32_t bmp_id = BMP_INVALID_ID;
+    uint32_t len = 0;
+    do {
+        if (len >= maxlen)
+        {
+            return -1;
+        }
+
+        bmp_id = bmp_get_next_set_bit(bmp, bmp_id);
+        if (bmp_id != -1)
+            len += snprintf((char *)str+len, maxlen-len, "%d,", bmp_id);
+    }while(bmp_id != -1);
+
+    return len;
+}
+
+int vlanmask_to_string(BITMAP_T *mask, uint8_t *str, uint32_t maxlen)
+{
+    uint32_t i;
+    uint32_t len;
+    VLAN_ID start_vlan, end_vlan;
+
+    if (str == NULL)
+        return false;
+
+    *str = '\0';
+    len = 0;
+    start_vlan = end_vlan = VLAN_ID_INVALID;
+
+    for (i = MIN_VLAN_ID; i <= MAX_VLAN_ID; i++)
+    {
+        if (VLANMASK_ISSET(mask, i))
+        {
+            if (start_vlan == VLAN_ID_INVALID)
+            {
+                start_vlan = i;
+            }
+            end_vlan = i;
+            continue;
+        }
+
+        if (start_vlan != VLAN_ID_INVALID)
+        {
+            if (len >= maxlen)
+                return false;
+
+            if (start_vlan == end_vlan)
+                len += snprintf((char *)str+len, maxlen-len, "%d ", start_vlan);
+            else
+                len += snprintf((char *)str+len, maxlen-len, "%d to %d ", start_vlan, end_vlan);
+
+            start_vlan = end_vlan = VLAN_ID_INVALID;
+        }
+    }
+
+    if (start_vlan != VLAN_ID_INVALID)
+    {
+        if (len >= maxlen)
+            return false;
+
+        if (start_vlan == end_vlan)
+            len += snprintf((char *)str+len, maxlen-len, "%d ", start_vlan);
+        else
+            len += snprintf((char *)str+len, maxlen-len, "%d to %d ", start_vlan, end_vlan);
+    }
+
+    return len;
+}
+
 void sys_assert(int status)
 {
     assert(status);

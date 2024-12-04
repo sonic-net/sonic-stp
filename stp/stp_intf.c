@@ -38,7 +38,8 @@ char * stp_intf_get_port_name(uint32_t port_id)
         if (node->port_id == port_id)
             return node->ifname;
     }
-    return NULL;
+    snprintf(g_stp_invalid_port_name, IFALIASZ, "%d", port_id);
+    return g_stp_invalid_port_name;
 }
 
 bool stp_intf_is_port_up(int port_id)
@@ -103,54 +104,7 @@ bool stp_intf_get_mac(int port_id, MAC_ADDRESS *mac)
 {
     // SONIC has same MAC for all interface
     COPY_MAC(mac, &g_stp_base_mac_addr);
-#if 0
-    struct avl_traverser trav;
-    INTERFACE_NODE *node = 0;
-    avl_t_init(&trav, g_stpd_intf_db);
 
-    while(NULL != (node = avl_t_next(&trav)))
-    {
-        if (node->port_id == port_id)
-        {
-            memcpy(&mac->_ulong, &node->mac[0], sizeof(uint32_t));
-            memcpy(&mac->_ushort, &node->mac[4], sizeof(uint16_t));
-            return true;
-        }
-    }
-    return false;
-#endif
-}
-
-#if 0
-uint32_t stp_intf_get_kif_index(uint32_t port_id)
-{
-    struct avl_traverser trav;
-    INTERFACE_NODE *node = 0;
-    avl_t_init(&trav, g_stpd_intf_db);
-
-    while(NULL != (node = avl_t_next(&trav)))
-    {
-        if (node->port_id == port_id)
-            return node->kif_index;
-    }
-
-    return BAD_PORT_ID;
-}
-
-
-uint32_t stp_intf_get_port_id_by_kif_index(uint32_t kif_index)
-{
-    struct avl_traverser trav;
-    INTERFACE_NODE *node = 0;
-    avl_t_init(&trav, g_stpd_intf_db);
-
-    while(NULL != (node = avl_t_next(&trav)))
-    {
-        if (node->kif_index == kif_index)
-            return node->port_id;
-    }
-
-    return BAD_PORT_ID;
 }
 
 uint32_t stp_intf_get_kif_index_by_port_id(uint32_t port_id)
@@ -167,7 +121,22 @@ uint32_t stp_intf_get_kif_index_by_port_id(uint32_t port_id)
 
     return BAD_PORT_ID;
 }
-#endif
+
+uint32_t stp_intf_get_port_id_by_kif_index(uint32_t kif_index)
+{
+    struct avl_traverser trav;
+    INTERFACE_NODE *node = 0;
+    avl_t_init(&trav, g_stpd_intf_db);
+
+    while(NULL != (node = avl_t_next(&trav)))
+    {
+        if (node->kif_index == kif_index)
+            return node->port_id;
+    }
+
+    return BAD_PORT_ID;
+}
+
 
 uint32_t stp_intf_get_port_id_by_name(char *ifname)
 {
@@ -395,8 +364,16 @@ void stp_intf_del_po_member(uint32_t po_kif_index, uint32_t member_port)
     if(!node->member_port_count)
     {
         stputil_set_global_enable_mask(node->port_id, false);
-        for (stp_index = 0; stp_index < g_stp_instances; stp_index++)
-            stpmgr_delete_control_port(stp_index, node->port_id, true);
+         if (STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
+        {
+            for (stp_index = 0; stp_index < g_stp_instances; stp_index++)
+                stpmgr_delete_control_port(stp_index, node->port_id, true);
+        }
+        else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+        {
+            mstpdata_update_vlanport_db_on_po_delete(node->port_id);
+            mstpmgr_delete_control_port(node->port_id, true);
+        }
 
         stp_intf_release_po_id(node->port_id);
         stp_intf_del_from_intf_db(node);
@@ -530,7 +507,10 @@ void stp_intf_netlink_cb(netlink_db_t *if_db, uint8_t is_add, bool init_in_prog)
 
             if(!init_in_prog && (if_db->master_ifindex == 0) && (node->port_id != BAD_PORT_ID))
             {
-                stpmgr_port_event(node->port_id, if_db->oper_state);
+                if (STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
+                    stpmgr_port_event(node->port_id, if_db->oper_state);
+                else if(STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+                    mstpmgr_port_event(node->port_id, if_db->oper_state);
             }
         }
     }
@@ -663,7 +643,7 @@ uint16_t stp_intf_get_port_priority(PORT_ID port_id)
     return (STP_DFLT_PORT_PRIORITY >> 4);
 }
 
-bool stp_intf_set_path_cost(PORT_ID port_id, uint32_t path_cost)
+bool stp_intf_set_path_cost(PORT_ID port_id, uint32_t path_cost, uint8_t def_path_cost)
 {
     INTERFACE_NODE *node = NULL;
 
@@ -671,6 +651,7 @@ bool stp_intf_set_path_cost(PORT_ID port_id, uint32_t path_cost)
     if (node)
     {
         node->path_cost = path_cost;
+        node->def_path_cost = def_path_cost;
         return true;
     }
 
@@ -702,6 +683,139 @@ void stp_intf_reset_port_params()
         {
             node->priority = STP_DFLT_PORT_PRIORITY >> 4;
             node->path_cost = stputil_get_path_cost(node->speed, g_stpd_extend_mode);
+            node->def_path_cost = true;
+            memset((char *)node->mst_info, 0, (sizeof(MST_INFO) * MSTP_MAX_INSTANCES));
         }
     }
+}
+
+BITMAP_T *static_mask_init(STATIC_BITMAP_T *bmp)
+{
+    static_bmp_init(bmp);
+    return (BITMAP_T *)bmp;
+}
+
+void stp_intf_set_inst_port_priority(PORT_ID port_id, UINT16 mstp_index, uint16_t priority, UINT8 add)
+{
+    INTERFACE_NODE *node = NULL;
+
+    node = stp_intf_get_node(port_id);
+    if (node)
+    {
+        if(add)
+        {
+            node->mst_info[mstp_index].flag |= MSTP_PORT_PRI_FLAG;
+            node->mst_info[mstp_index].priority = priority >> 4;
+        }
+        else
+        {
+            node->mst_info[mstp_index].flag &= ~MSTP_PORT_PRI_FLAG;
+            node->mst_info[mstp_index].priority = STP_DFLT_PORT_PRIORITY >> 4;
+        }
+    }
+}
+
+uint16_t stp_intf_get_inst_port_priority(PORT_ID port_id, UINT16 mstp_index)
+{
+    INTERFACE_NODE *node = NULL;
+
+    node = stp_intf_get_node(port_id);
+    if (node)
+    {
+        if((mstp_index != MSTP_INDEX_INVALID) && (node->mst_info[mstp_index].flag & MSTP_PORT_PRI_FLAG))
+        {
+            return (node->mst_info[mstp_index].priority);
+        }
+        else
+        {
+            return(node->priority);
+        }
+    }
+    return (STP_DFLT_PORT_PRIORITY >> 4);
+}
+
+bool stp_intf_is_inst_port_priority_set(PORT_ID port_id, UINT16 mstp_index)
+{
+    INTERFACE_NODE *node = NULL;
+
+    node = stp_intf_get_node(port_id);
+    if (node)
+    {
+        if(node->mst_info[mstp_index].flag & MSTP_PORT_PRI_FLAG)
+            return true;
+        else
+            return false;
+    }
+    return false;
+}
+
+void stp_intf_set_inst_port_pathcost(PORT_ID port_id, UINT16 mstp_index, UINT32 cost, UINT8 add)
+{
+    INTERFACE_NODE *node = NULL;
+
+    node = stp_intf_get_node(port_id);
+    if (node)
+    {
+        if(add)
+        {
+            node->mst_info[mstp_index].flag |= MSTP_PORT_PATH_COST_FLAG;
+            node->mst_info[mstp_index].path_cost = cost;
+        }
+        else
+        {
+            node->mst_info[mstp_index].flag &= ~MSTP_PORT_PATH_COST_FLAG;
+            node->mst_info[mstp_index].path_cost = cost;
+        }
+    }
+}
+
+UINT32 stp_intf_get_inst_port_pathcost(PORT_ID port_id, UINT16 mstp_index)
+{
+    INTERFACE_NODE *node = NULL;
+
+    node = stp_intf_get_node(port_id);
+    if (node)
+    {
+        if((mstp_index != MSTP_INDEX_INVALID) &&(node->mst_info[mstp_index].flag & MSTP_PORT_PATH_COST_FLAG))
+        {
+            return (node->mst_info[mstp_index].path_cost);
+        }
+        else
+        {
+            /* Node path cost will be port level cost */
+            return(node->path_cost);
+        }
+    }
+    return false;
+}
+
+bool stp_intf_is_inst_port_pathcost_set(PORT_ID port_id, UINT16 mstp_index)
+{
+    INTERFACE_NODE *node = NULL;
+
+    node = stp_intf_get_node(port_id);
+    if (node)
+    {
+        if(node->mst_info[mstp_index].flag & MSTP_PORT_PATH_COST_FLAG)
+            return true;
+        else
+            return false;
+    }
+    return false;
+}
+
+bool stp_intf_is_default_port_pathcost(PORT_ID port_id, UINT16 mstp_index)
+{
+    INTERFACE_NODE *node = NULL;
+
+    node = stp_intf_get_node(port_id);
+    if (node)
+    {
+        if((node->mst_info[mstp_index].flag & MSTP_PORT_PATH_COST_FLAG) ||
+                !node->def_path_cost)
+            return false;
+        else
+            return true;
+    }
+    return true;
 }
