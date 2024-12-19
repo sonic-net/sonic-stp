@@ -23,18 +23,18 @@
 /*****************************************************************************/
 typedef enum SORT_RETURN
 {
-        LESS_THAN = -1,
-        EQUAL_TO = 0,
-        GREATER_THAN = 1
+	LESS_THAN = -1,
+	EQUAL_TO = 0,
+	GREATER_THAN = 1
 } SORT_RETURN;
 
 #define PORT_MASK BITMAP_T
 
-#define STP_INDEX                       UINT16
-#define STP_INDEX_INVALID               0xFFFF
+#define STP_INDEX UINT16
+#define STP_INDEX_INVALID 0xFFFF
 
-#define IS_STP_MAC(_mac_ptr_)           (SAME_MAC_ADDRESS((_mac_ptr_), &bridge_group_address))
-#define IS_PVST_MAC(_mac_ptr_)          (SAME_MAC_ADDRESS((_mac_ptr_), &pvst_bridge_group_address))
+#define IS_STP_MAC(_mac_ptr_) (SAME_MAC_ADDRESS((_mac_ptr_), &bridge_group_address))
+#define IS_PVST_MAC(_mac_ptr_) (SAME_MAC_ADDRESS((_mac_ptr_), &pvst_bridge_group_address))
 
 /*****************************************************************************/
 /* enum definitions                                                          */
@@ -42,9 +42,9 @@ typedef enum SORT_RETURN
 
 typedef enum STP_BPDU_TYPE
 {
-	CONFIG_BPDU_TYPE                    = 0,
-	RSTP_BPDU_TYPE                      = 2,
-	TCN_BPDU_TYPE                       = 128
+	CONFIG_BPDU_TYPE = 0,
+	RSTP_BPDU_TYPE = 2,
+	TCN_BPDU_TYPE = 128
 } STP_BPDU_TYPE;
 
 /*****************************************************************************/
@@ -54,102 +54,102 @@ typedef enum STP_BPDU_TYPE
 typedef struct BRIDGE_BPDU_FLAGS
 {
 #if __BYTE_ORDER == __BIG_ENDIAN
-	UINT8                   topology_change_acknowledgement:1;
-	UINT8                   blank:6;
-	UINT8                   topology_change:1;
+	UINT8 topology_change_acknowledgement : 1;
+	UINT8 blank : 6;
+	UINT8 topology_change : 1;
 #else
-	UINT8                   topology_change:1;
-	UINT8                   blank:6;
-	UINT8                   topology_change_acknowledgement:1;
+	UINT8 topology_change : 1;
+	UINT8 blank : 6;
+	UINT8 topology_change_acknowledgement : 1;
 #endif
-}__attribute__ ((packed))BRIDGE_BPDU_FLAGS;
+} __attribute__((aligned(1))) BRIDGE_BPDU_FLAGS;
 
 typedef struct BRIDGE_IDENTIFIER
 {
 #if __BYTE_ORDER == __BIG_ENDIAN
-	UINT16                  priority:4;
-	UINT16                  system_id:12;
+	UINT16 priority : 4;
+	UINT16 system_id : 12;
 #else
-	UINT16                  system_id:12;
-	UINT16                  priority:4;
-#endif //BIG_ENDIAN
+	UINT16 system_id : 12;
+	UINT16 priority : 4;
+#endif // BIG_ENDIAN
 
-	MAC_ADDRESS             address;
+	MAC_ADDRESS address;
 
-}__attribute__ ((packed))BRIDGE_IDENTIFIER;
+} __attribute__((aligned(4))) BRIDGE_IDENTIFIER;
 
 typedef struct PORT_IDENTIFIER
 {
 #if __BYTE_ORDER == __BIG_ENDIAN
-	UINT16                  priority:4;
-	UINT16                  number:12;
+	UINT16 priority : 4;
+	UINT16 number : 12;
 #else
-	UINT16                  number:12;
-	UINT16                  priority:4;
-#endif //BIG_ENDIAN
-}__attribute__ ((packed))PORT_IDENTIFIER;
+	UINT16 number : 12;
+	UINT16 priority : 4;
+#endif // BIG_ENDIAN
+} __attribute__((aligned(2))) PORT_IDENTIFIER;
 
 // spanning-tree configuration bpdu
 typedef struct STP_CONFIG_BPDU
 {
-	MAC_HEADER              mac_header;
-	LLC_HEADER              llc_header;
-	UINT16                  protocol_id;
-	UINT8                   protocol_version_id;
-	UINT8                   type;
-	BRIDGE_BPDU_FLAGS       flags;
-	BRIDGE_IDENTIFIER       root_id;
-	UINT32                  root_path_cost;
-	BRIDGE_IDENTIFIER       bridge_id;
-	PORT_IDENTIFIER         port_id;
-	UINT16                  message_age;
-	UINT16                  max_age;
-	UINT16                  hello_time;
-	UINT16                  forward_delay;
-}__attribute__ ((packed))STP_CONFIG_BPDU;
+	MAC_HEADER mac_header;
+	LLC_HEADER llc_header;
+	UINT16 protocol_id;
+	UINT8 protocol_version_id;
+	UINT8 type;
+	BRIDGE_BPDU_FLAGS flags;
+	BRIDGE_IDENTIFIER root_id;
+	UINT32 root_path_cost;
+	BRIDGE_IDENTIFIER bridge_id;
+	PORT_IDENTIFIER port_id;
+	UINT16 message_age;
+	UINT16 max_age;
+	UINT16 hello_time;
+	UINT16 forward_delay;
+} __attribute__((aligned(4))) STP_CONFIG_BPDU;
 
 // spanning-tree topology change notification bpdu
 typedef struct STP_TCN_BPDU
 {
-	MAC_HEADER              mac_header;
-	LLC_HEADER              llc_header;
-	UINT16                  protocol_id;
-	UINT8                   protocol_version_id;
-	UINT8                   type;
-	UINT8                   padding[3];
-}__attribute__ ((packed))STP_TCN_BPDU;
+	MAC_HEADER mac_header;
+	LLC_HEADER llc_header;
+	UINT16 protocol_id;
+	UINT8 protocol_version_id;
+	UINT8 type;
+	UINT8 padding[3];
+} __attribute__((aligned(4))) STP_TCN_BPDU;
 
 // pvst configuration bpdu
 typedef struct PVST_CONFIG_BPDU
 {
-	MAC_HEADER              mac_header;
-	SNAP_HEADER             snap_header;
-	UINT16                  protocol_id;
-	UINT8                   protocol_version_id;
-	UINT8                   type;
-	BRIDGE_BPDU_FLAGS       flags;
-	BRIDGE_IDENTIFIER       root_id;
-	UINT32                  root_path_cost;
-	BRIDGE_IDENTIFIER       bridge_id;
-	PORT_IDENTIFIER         port_id;
-	UINT16                  message_age;
-	UINT16                  max_age;
-	UINT16                  hello_time;
-	UINT16                  forward_delay;
-	UINT8                   padding[3];
-	UINT16                  tag_length;
-	UINT16                 	vlan_id;
-}__attribute__ ((packed))PVST_CONFIG_BPDU;
+	MAC_HEADER mac_header;
+	SNAP_HEADER snap_header;
+	UINT16 protocol_id;
+	UINT8 protocol_version_id;
+	UINT8 type;
+	BRIDGE_BPDU_FLAGS flags;
+	BRIDGE_IDENTIFIER root_id;
+	UINT32 root_path_cost;
+	BRIDGE_IDENTIFIER bridge_id;
+	PORT_IDENTIFIER port_id;
+	UINT16 message_age;
+	UINT16 max_age;
+	UINT16 hello_time;
+	UINT16 forward_delay;
+	UINT8 padding[3];
+	UINT16 tag_length;
+	UINT16 vlan_id;
+} __attribute__((aligned(4))) PVST_CONFIG_BPDU;
 
 // pvst topology change notification bpdu
 typedef struct PVST_TCN_BPDU
 {
-	MAC_HEADER              mac_header;
-	SNAP_HEADER             snap_header;
-	UINT16                  protocol_id;
-	UINT8                   protocol_version_id;
-	UINT8                   type;
-	UINT8                   padding[38];
-}__attribute__ ((packed))PVST_TCN_BPDU;
+	MAC_HEADER mac_header;
+	SNAP_HEADER snap_header;
+	UINT16 protocol_id;
+	UINT8 protocol_version_id;
+	UINT8 type;
+	UINT8 padding[38];
+} __attribute__((aligned(4))) PVST_TCN_BPDU;
 
 #endif //__STP_COMMON_H__
