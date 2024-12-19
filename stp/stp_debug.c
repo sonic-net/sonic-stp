@@ -87,10 +87,10 @@ void stpdbg_dump_stp_stats()
     STP_DUMP("virtual_event_count       : %d\n",event_base_get_num_events(stp_intf_get_evbase(), EVENT_BASE_COUNT_VIRTUAL));
     STP_DUMP("event_count               : %d\n",event_base_get_num_events(stp_intf_get_evbase(), EVENT_BASE_COUNT_ADDED));
     STP_DUMP("----Stats----\n");
-    STP_DUMP("Timer   : %lu\n", g_stpd_stats_libev_timer);
-    STP_DUMP("Pkt-rx  : %lu\n", g_stpd_stats_libev_pktrx);
-    STP_DUMP("IPC     : %lu\n", g_stpd_stats_libev_ipc);
-    STP_DUMP("Netlink : %lu\n", g_stpd_stats_libev_netlink);
+    STP_DUMP("Timer   : %lu \n", (unsigned long)g_stpd_stats_libev_timer);
+    STP_DUMP("Pkt-rx  : %lu \n", (unsigned long)g_stpd_stats_libev_pktrx);
+    STP_DUMP("IPC     : %lu \n", (unsigned long)g_stpd_stats_libev_ipc);
+    STP_DUMP("Netlink : %lu \n", (unsigned long)g_stpd_stats_libev_netlink);
 
     STP_DUMP("\n");
     STP_DUMP("-----------------------------------------\n");
@@ -103,11 +103,11 @@ void stpdbg_dump_stp_stats()
                 || STPD_GET_PKT_COUNT(i, pkt_rx_err)
                 || STPD_GET_PKT_COUNT(i, pkt_tx_err))   
         {
-            STP_DUMP("%4u  | %6lu | %6lu | %6lu | %6lu \n", i
-                    , STPD_GET_PKT_COUNT(i, pkt_rx)
-                    , STPD_GET_PKT_COUNT(i, pkt_tx)
-                    , STPD_GET_PKT_COUNT(i, pkt_rx_err) + STPD_GET_PKT_COUNT(i, pkt_rx_err_trunc)
-                    , STPD_GET_PKT_COUNT(i, pkt_tx_err));
+            STP_DUMP("%4u  | %6lu  | %6lu | %6lu | %6lu \n", i
+                    , (unsigned long)STPD_GET_PKT_COUNT(i, pkt_rx)
+                    , (unsigned long)STPD_GET_PKT_COUNT(i, pkt_tx)
+                    , (unsigned long)STPD_GET_PKT_COUNT(i, pkt_rx_err) + STPD_GET_PKT_COUNT(i, pkt_rx_err_trunc)
+                    , (unsigned long)STPD_GET_PKT_COUNT(i, pkt_tx_err));
         }
     }
 }
@@ -158,9 +158,9 @@ void stpdm_global()
             "stp_drop_count     = %u\n\t"
             "tcn_drop_count     = %u\n\t"
             "max port           = %u\n",
-            sizeof(STP_GLOBAL),
-            sizeof(STP_CLASS),
-            sizeof(STP_PORT_CLASS),
+            (unsigned long)sizeof(STP_GLOBAL),
+            (unsigned long)sizeof(STP_CLASS),
+            (unsigned long)sizeof(STP_PORT_CLASS),
             stp_global.max_instances,
             stp_global.active_instances,
             stp_global.tick_id,
@@ -191,7 +191,7 @@ void stpdm_class(STP_CLASS *stp_class)
 
     STP_DUMP("STP CLASS STRUCTURE - INDEX %ld\n"
             "====================================\n\t",
-            (stp_class - stp_global.class_array));
+            (long int)(stp_class - stp_global.class_array));
 
     memset(s1, 0, 256);
     memset(s2, 0, 256);
