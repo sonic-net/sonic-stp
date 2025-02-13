@@ -74,7 +74,6 @@ jobs:
       set -ex
       ls -l ../
       pwd
-      find /usr/lib -name libevent.a
 
       #install HIREDIS
       sudo apt-get install -y libhiredis0.14 libhiredis-dev
@@ -89,6 +88,10 @@ jobs:
       sudo dpkg -i ../target/debs/bookworm/libnl-route-3-200_*.deb
       sudo dpkg -i ../target/debs/bookworm/libnl-nf-3-200_*.deb
       #sudo apt-get install -qq -y libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev
+
+      # Install libevent-2.1-12
+      sudo apt-get install -y libevent-2.1-12 
+      sudo dpkg -i ../target/debs/bookworm/libnl-3-200_*.deb
 
       #install libswsscommon
       sudo dpkg -i ../libswsscommon_1.0.0_${{ parameters.arch }}.deb
