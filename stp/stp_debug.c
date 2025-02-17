@@ -158,9 +158,9 @@ void stpdm_global()
             "stp_drop_count     = %u\n\t"
             "tcn_drop_count     = %u\n\t"
             "max port           = %u\n",
-            sizeof(STP_GLOBAL),
-            sizeof(STP_CLASS),
-            sizeof(STP_PORT_CLASS),
+            (unsigned long)sizeof(STP_GLOBAL),
+            (unsigned long)sizeof(STP_CLASS),
+            (unsigned long)sizeof(STP_PORT_CLASS),
             stp_global.max_instances,
             stp_global.active_instances,
             stp_global.tick_id,
@@ -191,7 +191,7 @@ void stpdm_class(STP_CLASS *stp_class)
 
     STP_DUMP("STP CLASS STRUCTURE - INDEX %d\n"
             "====================================\n\t",
-            (stp_class - stp_global.class_array));
+            (long int)(stp_class - stp_global.class_array));
 
     memset(s1, 0, 256);
     memset(s2, 0, 256);

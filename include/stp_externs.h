@@ -155,6 +155,8 @@ extern void stpdm_class(STP_CLASS *stp_class);
 extern void stpdm_port_class(STP_CLASS *stp_class, PORT_ID port_number); 
 extern void stpdm_global();
 extern void stpdm_clear();
+extern void stpdbg_dump_stp_stats();
+
 
 extern void stp_show_debug_log (UINT16 instance_id, UINT16 print_count, UINT8 print_all);
 extern void stp_show_debug_log_all (UINT16 print_count);
