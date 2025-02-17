@@ -189,7 +189,7 @@ void stpdm_class(STP_CLASS *stp_class)
 {
     UINT8 s1[256], s2[256], s3[256];
 
-    STP_DUMP("STP CLASS STRUCTURE - INDEX %d\n"
+    STP_DUMP("STP CLASS STRUCTURE - INDEX %ld\n"
             "====================================\n\t",
             (long int)(stp_class - stp_global.class_array));
 
