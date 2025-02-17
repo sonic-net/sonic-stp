@@ -87,10 +87,10 @@ void stpdbg_dump_stp_stats()
     STP_DUMP("virtual_event_count       : %d\n",event_base_get_num_events(stp_intf_get_evbase(), EVENT_BASE_COUNT_VIRTUAL));
     STP_DUMP("event_count               : %d\n",event_base_get_num_events(stp_intf_get_evbase(), EVENT_BASE_COUNT_ADDED));
     STP_DUMP("----Stats----\n");
-    STP_DUMP("Timer   : %lu \n", (unsigned long)g_stpd_stats_libev_timer);
-    STP_DUMP("Pkt-rx  : %lu \n", (unsigned long)g_stpd_stats_libev_pktrx);
-    STP_DUMP("IPC     : %lu \n", (unsigned long)g_stpd_stats_libev_ipc);
-    STP_DUMP("Netlink : %lu \n", (unsigned long)g_stpd_stats_libev_netlink);
+    STP_DUMP("Timer   : %" PRIu64 "\n", g_stpd_stats_libev_timer);
+    STP_DUMP("Pkt-rx  : %" PRIu64 "\n", g_stpd_stats_libev_pktrx);
+    STP_DUMP("IPC     : %" PRIu64 "\n", g_stpd_stats_libev_ipc);
+    STP_DUMP("Netlink : %" PRIu64 "\n", g_stpd_stats_libev_netlink);
 
     STP_DUMP("\n");
     STP_DUMP("-----------------------------------------\n");
@@ -103,11 +103,11 @@ void stpdbg_dump_stp_stats()
                 || STPD_GET_PKT_COUNT(i, pkt_rx_err)
                 || STPD_GET_PKT_COUNT(i, pkt_tx_err))   
         {
-            STP_DUMP("%4u  | %6lu  | %6lu | %6lu | %6lu \n", i
-                    , (unsigned long)STPD_GET_PKT_COUNT(i, pkt_rx)
-                    , (unsigned long)STPD_GET_PKT_COUNT(i, pkt_tx)
-                    , (unsigned long)STPD_GET_PKT_COUNT(i, pkt_rx_err) + STPD_GET_PKT_COUNT(i, pkt_rx_err_trunc)
-                    , (unsigned long)STPD_GET_PKT_COUNT(i, pkt_tx_err));
+            STP_DUMP("%4u  | %6" PRIu64 " | %6" PRIu64 " | %6" PRIu64 " | %6" PRIu64 " \n", i
+                    , STPD_GET_PKT_COUNT(i, pkt_rx)
+                    , STPD_GET_PKT_COUNT(i, pkt_tx)
+                    , STPD_GET_PKT_COUNT(i, pkt_rx_err) + STPD_GET_PKT_COUNT(i, pkt_rx_err_trunc)
+                    , STPD_GET_PKT_COUNT(i, pkt_tx_err));
         }
     }
 }
@@ -133,9 +133,9 @@ void stpdm_global()
     STP_DUMP("==============================\n\n\t");
 
     STP_DUMP(
-            "sizeof(STP_GLOBAL)     = %lu bytes\n\t"
-            "sizeof(STP_CLASS)      = %lu bytes\n\t"
-            "sizeof(STP_PORT_CLASS) = %lu bytes\n\t"
+            "sizeof(STP_GLOBAL)     = %" PRIu64 " bytes\n\t"
+            "sizeof(STP_CLASS)      = %" PRIu64 " bytes\n\t"
+            "sizeof(STP_PORT_CLASS) = %" PRIu64 " bytes\n\t"
             "max_instances          = %d\n\t"
             "active_instances       = %d\n\t"
             "tick_id                = %d\n\t"

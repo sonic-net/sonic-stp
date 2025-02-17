@@ -26,6 +26,7 @@
 #include <sys/ioctl.h>
 #include <linux/if.h>
 #include <signal.h>
+#include <inttypes.h>
 
 #include "applog.h"
 #include "stp_ipc.h"

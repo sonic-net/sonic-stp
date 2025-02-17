@@ -33,8 +33,8 @@
 
 typedef struct TIMER
 {
-	UINT32 active : 1;
-	UINT32 value : 31;
+	UINT32 active;
+	UINT32 value;
 } __attribute__((aligned(4))) TIMER;
 
 uint32_t sys_get_seconds();
