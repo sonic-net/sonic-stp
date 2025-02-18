@@ -133,9 +133,9 @@ void stpdm_global()
     STP_DUMP("==============================\n\n\t");
 
     STP_DUMP(
-            "sizeof(STP_GLOBAL)     = %" PRIu64 " bytes\n\t"
-            "sizeof(STP_CLASS)      = %" PRIu64 " bytes\n\t"
-            "sizeof(STP_PORT_CLASS) = %" PRIu64 " bytes\n\t"
+            "sizeof(STP_GLOBAL)     = %zu bytes\n\t"
+            "sizeof(STP_CLASS)      = %zu bytes\n\t"
+            "sizeof(STP_PORT_CLASS) = %zu bytes\n\t"
             "max_instances          = %d\n\t"
             "active_instances       = %d\n\t"
             "tick_id                = %d\n\t"
@@ -158,9 +158,9 @@ void stpdm_global()
             "stp_drop_count     = %u\n\t"
             "tcn_drop_count     = %u\n\t"
             "max port           = %u\n",
-            (unsigned long)sizeof(STP_GLOBAL),
-            (unsigned long)sizeof(STP_CLASS),
-            (unsigned long)sizeof(STP_PORT_CLASS),
+            sizeof(STP_GLOBAL),
+            sizeof(STP_CLASS),
+            sizeof(STP_PORT_CLASS),
             stp_global.max_instances,
             stp_global.active_instances,
             stp_global.tick_id,
