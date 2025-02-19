@@ -19,7 +19,7 @@ stpd_LDADD = -lhiredis -lswsscommon -lcrypto \
 	         stp/libstp.a \
 	         lib/libcommonstp.a \
 			 -lcrypto \
-	         /usr/lib/x86_64-linux-gnu/libevent.a \
+	         -levent \
 			 $(COV_LDFLAGS)
 
 libstp_a_CFLAGS = -Werror -Wno-error=address-of-packed-member $(COV_CFLAGS)
