@@ -30,10 +30,11 @@ using namespace swss;
 
 extern char mstp_role_string[][20];
 
-// TODO - add to schema 
+// TODO - Remove this after addin to schema 
 #define APP_STP_INST_PORT_FLUSH_TABLE_NAME  "STP_INST_PORT_FLUSH_TABLE"
 #define APP_STP_MST_TABLE_NAME              "STP_MST_INST_TABLE"
 #define APP_STP_MST_PORT_TABLE_NAME         "STP_MST_PORT_TABLE"
+#define APP_STP_MST_NAME_TABLE_NAME         "STP_MST_NAME_TABLE"
 
 StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
     m_stpVlanTable(db, APP_STP_VLAN_TABLE_NAME),
@@ -41,11 +42,10 @@ StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
     m_stpVlanInstanceTable(db, APP_STP_VLAN_INSTANCE_TABLE_NAME),
     m_stpPortTable(db, APP_STP_PORT_TABLE_NAME),
     m_stpPortStateTable(db, APP_STP_PORT_STATE_TABLE_NAME),
-    m_appVlanMemberTable(db, APP_VLAN_MEMBER_TABLE_NAME),
-    m_stpFastAgeFlushTable(db, APP_STP_FASTAGEING_FLUSH_TABLE_NAME),
-    m_stpInstancePortFlushTable(db, APP_STP_INST_PORT_FLUSH_TABLE_NAME),
     m_stpMstTable(db, APP_STP_MST_TABLE_NAME),
     m_stpMstPortTable(db, APP_STP_MST_PORT_TABLE_NAME),
+    m_stpFastAgeFlushTable(db, APP_STP_FASTAGEING_FLUSH_TABLE_NAME),
+    m_stpInstancePortFlushTable(db, APP_STP_INST_PORT_FLUSH_TABLE_NAME),
     m_appPortTable(db, APP_PORT_TABLE_NAME),
 	m_cfgPortTable(cfgDb, CFG_PORT_TABLE_NAME),
 	m_cfgLagTable(cfgDb, CFG_LAG_TABLE_NAME)
@@ -158,6 +158,10 @@ extern "C" {
     {
         stpsync.delStpMstInterfaceInfo(if_name, mst_id);
     }
+
+    void stpsync_update_boundary_port(char * ifName, bool enabled, char *proto)
+    {
+        stpsync.updateBoundaryPort(ifName, enabled, proto);
     }
 }
 
@@ -438,37 +442,6 @@ void StpSync::delStpPortState(char * if_name, uint16_t instance)
     SWSS_LOG_NOTICE("Delete STP port:%s instance:%d", ifName.c_str(), instance);
 }
 
-#if 0
-void StpSync::updateStpVlanPortState(char * if_name, uint16_t vlan_id, uint8_t state)
-{
-    std::string ifName(if_name);
-    std::vector<FieldValueTuple> fvVector;
-    std::string key = ifName;
-    string vlan;
-
-    vlan = VLAN_PREFIX + to_string(vlan_id);
-    key = vlan + ':' + ifName;
-
-    FieldValueTuple o("stp_state", to_string(state));
-    
-    m_appVlanMemberTable.set(key, fvVector);
-    
-    SWSS_LOG_NOTICE(" Update STP VLAN %s port %s state %d", vlan.c_str(), if_name, state);
-}
-
-void StpSync::delStpVlanPortState(char * if_name, uint16_t vlan_id)
-{
-    std::string ifName(if_name);
-    std::string key = ifName;
-    string vlan;
-
-    vlan = VLAN_PREFIX + to_string(vlan_id);
-    key = vlan + ':' + ifName;
-    m_appVlanMemberTable.del(key);
-    
-    SWSS_LOG_NOTICE(" Delete STP VLAN %s port %s", vlan.c_str(), if_name);
-}
-#endif
 void StpSync::updateStpVlanFastage(uint16_t vlan_id, bool add)
 {
     string vlan;
@@ -573,7 +546,6 @@ void StpSync::clearAllStpAppDbTables(void)
     //m_stpVlanInstanceTable.clear();
     m_stpPortTable.clear();
     //m_stpPortStateTable.clear();
-    //m_appVlanMemberTable.clear();
     m_stpFastAgeFlushTable.clear();
     SWSS_LOG_NOTICE("STP clear all APP DB STP tables");
 }
@@ -811,7 +783,7 @@ void StpSync::delStpMstInterfaceInfo(char *if_name, uint16_t mst_id)
 
     SWSS_LOG_INFO("Delete STP_MST_PORT_TABLE for %s intf %s", mstid.c_str(), ifName.c_str());
 }
-void StpSync::updateBoundaryPort(char * if_name, bool enabled, char *proto)
+void StpSync::updateBoundaryPort(char *if_name, bool enabled, char *proto)
 {
     std::vector<FieldValueTuple> fvVector;
     std::string ifName(if_name);

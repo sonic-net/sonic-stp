@@ -8,15 +8,18 @@
 /*****************************************************************************/
 /* definitions                                                               */
 /*****************************************************************************/
-
 #define MSTP_MSTID_MIN                      1
 #define MSTP_MSTID_MAX                      4094
 #define MSTP_MSTID_CIST                     0
 #define MSTP_MSTID_INVALID                  (MSTP_MSTID_MAX+1)
 
+#define MSTP_INDEX_MIN                      0
+#define MSTP_INDEX_MAX                     (MSTP_MAX_INSTANCES_PER_REGION-1)
+#define MSTP_INDEX_CIST                     MSTP_MAX_INSTANCES_PER_REGION
+
+#define MSTP_TABLE_SIZE                     4096
 #define MSTP_MIN_INSTANCES                  1
 #define MSTP_MAX_INSTANCES_PER_REGION		64
-#define MSTP_VERSION_ID                     3
 
 #define MSTP_BPDU_BASE_SIZE                 38
 #define MSTP_BPDU_BASE_V3_LENGTH            64
@@ -31,21 +34,16 @@
 typedef struct
 {
 #if __BYTE_ORDER == __BIG_ENDIAN
-	// bridge priority
-	UINT16                  priority:4;
-	// system-id
-	UINT16                  system_id:12;
+	UINT16                  priority:4;  // bridge priority
+	UINT16                  system_id:12;// system-id
 #else
-	// system-id
-	UINT16                  system_id:12;
-	// bridge priority
-	UINT16                  priority:4;
-#endif // BIG_ENDIAN
-
+	UINT16                  system_id:12; // system-id
+	UINT16                  priority:4; // bridge priority
+#endif
 	// mac-address for the bridge
 	MAC_ADDRESS             address;
 
-}__attribute__ ((packed)) MSTP_BRIDGE_IDENTIFIER;
+}__attribute__((aligned(4))) MSTP_BRIDGE_IDENTIFIER;
 
 /*****************************************************************************/
 /* msti configuration message structure                                      */
@@ -68,8 +66,8 @@ typedef struct
 	UINT8                   forwarding:1;
 	UINT8                   agreement:1;
 	UINT8                   master:1;
-#endif // !BIG_ENDIAN
-} __attribute__ ((packed))MSTI_FLAGS;
+#endif
+} __attribute__((aligned(4)))MSTI_FLAGS;
 
 /*****************************************************************************/
 /*  msti configuration message structure                                     */
@@ -106,7 +104,7 @@ typedef struct
 	// mst instance remaining hops
 	UINT8                   msti_remaining_hops;
 
-} __attribute__ ((packed)) MSTI_CONFIG_MESSAGE;
+} __attribute__((aligned(4))) MSTI_CONFIG_MESSAGE;
 
 /*****************************************************************************/
 /*  mst configuration identification                                         */
@@ -118,7 +116,7 @@ typedef struct
 typedef struct
 {
 	// configuration identifier format selector - encoded as 0
-	UINT8                   format_selector;
+	UINT8                   format_selector; 
 
 	// configuration name - variable text string conforming to rfc 2271
 	// definition snmpAdminString
@@ -131,7 +129,7 @@ typedef struct
 	// the mst configuration table.
 	UINT8                   config_digest[16];
 
-} __attribute__ ((packed)) MSTP_CONFIG_IDENTIFIER;
+} __attribute__((aligned(4))) MSTP_CONFIG_IDENTIFIER;
 
 typedef struct RSTP_BPDU_FLAGS
 {
@@ -152,7 +150,7 @@ typedef struct RSTP_BPDU_FLAGS
         UINT8                   agreement:1;
         UINT8                   topology_change_acknowledgement:1;
 #endif
-} __attribute__ ((packed)) RSTP_BPDU_FLAGS;
+} __attribute__((aligned(4))) RSTP_BPDU_FLAGS;
 
 
 /*****************************************************************************/
@@ -223,7 +221,7 @@ typedef struct
 	// a sequence of zero or more msti configuration messages
 	MSTI_CONFIG_MESSAGE     msti_msgs[MSTP_MAX_INSTANCES_PER_REGION];
 
-} __attribute__ ((packed)) MSTP_BPDU;
+} __attribute__((aligned(4))) MSTP_BPDU;
 
 // rstp bpdu
 typedef struct RSTP_BPDU
@@ -243,6 +241,6 @@ typedef struct RSTP_BPDU
         UINT16                  hello_time;
         UINT16                  forward_delay;
         UINT8                   version1_length;
-} __attribute__ ((packed)) RSTP_BPDU;
+} __attribute__((aligned(4))) RSTP_BPDU;
 
 #endif // //__MSTP_COMMON_H__

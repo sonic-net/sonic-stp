@@ -213,8 +213,6 @@ void mstputil_get_default_name(UINT8 *name, UINT32 name_length)
 		g_stp_base_mac[4],
 		g_stp_base_mac[5]
 	);
-  
-    stpsync_mst_name(sys_mac);
 }
 
 /*****************************************************************************/
@@ -310,8 +308,6 @@ void mstputil_compute_message_digest(bool print)
             mstp_bridge->mstConfigId.config_digest[13],
             mstp_bridge->mstConfigId.config_digest[14],
             mstp_bridge->mstConfigId.config_digest[15]);
-    
-    stpsync_mst_digest(buffer);
 	
     if (print)
 	{
@@ -2076,7 +2072,7 @@ void mstputil_sync_mst_instance(MSTP_INDEX mstp_index)
                 }
                 else
                 {
-                    snprintf(stp_mst_table.root_port, IFALIASZ, "%s", stp_intf_get_port_name(cist_bridge->co.rootPortId));
+                    snprintf(stp_mst_table.root_port, IFNAMSIZ, "%s", stp_intf_get_port_name(cist_bridge->co.rootPortId));
                 }
             }
 
@@ -2142,7 +2138,7 @@ void mstputil_sync_mst_instance(MSTP_INDEX mstp_index)
                 }
                 else
                 {
-                    snprintf(stp_mst_table.root_port, IFALIASZ, "%s", 
+                    snprintf(stp_mst_table.root_port, IFNAMSIZ, "%s", 
                         stp_intf_get_port_name(msti_bridge->co.rootPortId));
                 }
 

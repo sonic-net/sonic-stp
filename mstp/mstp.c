@@ -5,9 +5,6 @@
 
 #include "stp_inc.h"
 
-// check that the input configuration identifiers are equal
-#define MSTP_CONFIG_ID_IS_EQUAL(_cnfg1_, _cnfg2_) \
-	(memcmp(&(_cnfg1_), &(_cnfg2_), sizeof(MSTP_CONFIG_IDENTIFIER)) == 0)
 
 MSTP_ROLE txRole[] =
 {

@@ -10,30 +10,6 @@
 /* definitions                                                               */
 /*****************************************************************************/
 
-#define ENCODE_REGION_WITH_MSTID(mstid,region_id) \
-(UINT16)( ( ((UINT16)region_id) << 12)  |  mstid)
-
-#define DECODE_REGION_FROM_MSTID(mstid) \
-(mstid >> 12)
-
-#define DECODE_MSTID_FROM_MSTID(mstid) \
-(mstid & 0x07ff)
-
-#define ENCODE_REGION_WITH_MSTP_INDEX(mstp_index,region_id) \
-(UINT16)( ( ((UINT16)region_id) << 5)  |  mstp_index)
-
-#define DECODE_REGION_FROM_MSTP_INDEX(mstp_index) \
-(mstp_index >> 5)
-
-#define DECODE_MST_INDEX_FROM_MST_INDEX(mstp_index) \
-(mstp_index & 0x01F)
-
-#define MSTP_INDEX_MIN                      0
-#define MSTP_INDEX_MAX                     (MSTP_MAX_INSTANCES_PER_REGION-1)
-#define MSTP_INDEX_CIST                     MSTP_MAX_INSTANCES_PER_REGION
-
-#define MSTP_TABLE_SIZE                     4096
-
 #define MSTP_MIN_REVISION_LEVEL             0
 #define MSTP_MAX_REVISION_LEVEL             65535
 #define MSTP_DFLT_REVISION_LEVEL            MSTP_MIN_REVISION_LEVEL
@@ -135,8 +111,10 @@
 #define MSTP_GET_NUM_MSTI_CONFIG_MESSAGES(_length_) \
 	(((_length_) <= MSTP_BPDU_BASE_V3_LENGTH) ? 0 : (((_length_)-MSTP_BPDU_BASE_V3_LENGTH)/sizeof(MSTI_CONFIG_MESSAGE)))
 
-
-
+// check that the input configuration identifiers are equal
+#define MSTP_CONFIG_ID_IS_EQUAL(_cnfg1_, _cnfg2_) \
+	(memcmp(&(_cnfg1_), &(_cnfg2_), sizeof(MSTP_CONFIG_IDENTIFIER)) == 0)
+	
 // debugging macros
 #define MSTP_DEBUG_MST_PORT(_mstp_index_, port_number) \
     ((debugGlobal.mstp.enabled) && \

@@ -506,16 +506,16 @@ void mstpdm_mstp_bridge()
 	STP_DUMP("\nMSTP GLOBAL STRUCTURES INFO");
 	STP_DUMP("\n===========================\n");
 
-	STP_DUMP("sizeof MSTP_GLOBAL %lu bytes, MSTP_BPDU %lu bytes\n"
-			"sizeof MSTP_BRIDGE %lu bytes, MSTP_PORT %lu bytes\n"
-			"sizeof MSTP_CIST_BRIDGE %lu bytes, MSTP_CIST_PORT %lu bytes\n"
-			"sizeof MSTP_MSTI_BRIDGE %lu bytes, MSTP_MSTI_PORT %lu bytes\n",
+	STP_DUMP("sizeof MSTP_GLOBAL %zu bytes, MSTP_BPDU %zu bytes\n"
+			"sizeof MSTP_BRIDGE %zu bytes, MSTP_PORT %zu bytes\n"
+			"sizeof MSTP_CIST_BRIDGE %zu bytes, MSTP_CIST_PORT %zu bytes\n"
+			"sizeof MSTP_MSTI_BRIDGE %zu bytes, MSTP_MSTI_PORT %zu bytes\n",
 			sizeof(MSTP_GLOBAL), sizeof(MSTP_BPDU),
 			sizeof(MSTP_BRIDGE), sizeof(MSTP_PORT),
 			sizeof(MSTP_CIST_BRIDGE), sizeof(MSTP_CIST_PORT),
 			sizeof(MSTP_MSTI_BRIDGE), sizeof(MSTP_MSTI_PORT));
 
-	STP_DUMP("current memory usage (appx) %lu bytes\n\n",
+	STP_DUMP("current memory usage (appx) %zu bytes\n\n",
 		(sizeof(MSTP_GLOBAL) +
 		sizeof(MSTP_BRIDGE) +
 		(sizeof(MSTP_PORT) * bmp_count_set_bits(mstp_bridge->control_mask)) +

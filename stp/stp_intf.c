@@ -17,6 +17,18 @@
 
 #include "stp_inc.h"
 
+/*
+ * Input:
+ *   pointer to STATIC_BITMAP_T
+ * Return:
+ *   pointer to BITMAP_T, so static bitmap can levarage and utilize all apis written for dynamic bmp.
+ */
+BITMAP_T *static_portmask_init(STATIC_BITMAP_T *bmp)
+{
+    static_bmp_init(bmp);
+    return (BITMAP_T *)bmp;
+}
+
 int stp_intf_get_netlink_fd()
 {
     return stpd_context.netlink_fd;
@@ -38,7 +50,7 @@ char * stp_intf_get_port_name(uint32_t port_id)
         if (node->port_id == port_id)
             return node->ifname;
     }
-    snprintf(g_stp_invalid_port_name, IFALIASZ, "%d", port_id);
+    snprintf(g_stp_invalid_port_name, IFNAMSIZ, "%d", port_id);
     return g_stp_invalid_port_name;
 }
 

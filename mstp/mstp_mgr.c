@@ -1340,7 +1340,6 @@ static bool mstpmgr_config_name(UINT8 *name)
     }
     memset(mstp_bridge->mstConfigId.name, 0, MSTP_NAME_LENGTH);
     strncpy(mstp_bridge->mstConfigId.name, name, (MSTP_NAME_LENGTH - 1));
-    stpsync_mst_name(mstp_bridge->mstConfigId.name);
 
     mstpmgr_restart();
     return true;
