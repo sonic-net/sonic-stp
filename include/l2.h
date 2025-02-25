@@ -44,6 +44,7 @@ typedef UINT16 VLAN_ID;
 #define MAX_VLAN_ID 4095
 #define VLAN_ID_INVALID (MAX_VLAN_ID + 1)
 #define L2_ETH_ADD_LEN 6
+#define VLAN_HEADER_LEN 4
 
 #define VLAN_ID_TAG_BITS 0xFFF
 #define GET_VLAN_ID_TAG(vlan_id) (vlan_id & VLAN_ID_TAG_BITS)
@@ -126,7 +127,73 @@ typedef struct MAC_HEADER
 #define STP_BPDU_OFFSET (sizeof(MAC_HEADER) + sizeof(LLC_HEADER))
 #define PVST_BPDU_OFFSET (sizeof(MAC_HEADER) + sizeof(SNAP_HEADER))
 
-#define STP_MAX_PKT_LEN 68
-#define VLAN_HEADER_LEN 4 // 4 bytes
+
+#define PORT_MASK      						  BITMAP_T
+#define VLAN_MASK      						  STATIC_BITMAP_T
+#define PORT_MASK_LOCAL						  STATIC_BITMAP_T
+
+#define vlan_bmp_init   					  static_bmp_init
+#define portmask_local_init 				  static_portmask_init
+
+#define IS_MEMBER(_bmp, _port)                bmp_isset(_bmp, _port)
+#define is_member(_bmp, _port)                bmp_isset(_bmp, _port)
+#define PORT_MASK_ISSET(_bmp, _port)          bmp_isset(_bmp, _port)
+
+#define PORT_MASK_ISSET_ANY(_bmp)             bmp_isset_any(_bmp)
+#define PORT_MASK_SET_ALL(_bmp)               bmp_set_all(_bmp)
+#define PORT_MASK_ZERO(_bmp)                  bmp_reset_all(_bmp)
+
+#define clear_mask(_bmp)                      bmp_reset_all(_bmp)
+#define is_mask_clear(_bmp)                   (!(bmp_isset_any(_bmp)))
+#define is_mask_equal(_bmp1, _bmp2)           bmp_is_mask_equal(_bmp1, _bmp2)
+#define copy_mask(_dst, _src)                 bmp_copy_mask(_dst, _src)
+#define not_mask(_dst, _src)                  bmp_not_mask(_dst, _src)
+#define and_masks(_tgt, _bmp1, _bmp2)         bmp_and_masks(_tgt, _bmp1, _bmp2)
+#define and_not_masks(_tgt, _bmp1, _bmp2)     bmp_and_not_masks(_tgt, _bmp1, _bmp2)
+#define or_masks(_tgt, _bmp1, _bmp2)          bmp_or_masks(_tgt, _bmp1, _bmp2)
+#define xor_masks(_tgt, _bmp1, _bmp2)         bmp_xor_masks(_tgt, _bmp1, _bmp2)
+
+#define set_mask_bit(_bmp, _port)             bmp_set(_bmp, _port)
+#define clear_mask_bit(_bmp, _port)           bmp_reset(_bmp, _port)
+
+#define port_mask_get_next_port(_bmp,_port)   bmp_get_next_set_bit(_bmp, _port)
+#define port_mask_get_first_port(_bmp)        bmp_get_first_set_bit(_bmp)
+
+#define vlanmask_clear_all(_bmp)              bmp_reset_all((BITMAP_T *)_bmp)
+#define vlanmask_is_clear(_bmp)               (!(bmp_isset_any((BITMAP_T *)_bmp)))
+#define vlanmask_copy(_dst, _src)             bmp_copy_mask((BITMAP_T *)_dst, (BITMAP_T *)_src)
+
+#define vlanmask_set_bit(_bmp, _vlan)         bmp_set((BITMAP_T *)_bmp, _vlan)
+#define vlanmask_clear_bit(_bmp, _vlan)       bmp_reset((BITMAP_T *)_bmp, _vlan)
+#define VLANMASK_ISSET(_bmp, _vlan)           bmp_isset((BITMAP_T *)_bmp, _vlan)
+
+
+/* L2_PROTOCOL_INSTANCE_MASK
+ * keeps track of the list of msti instances running inside mstp region
+ */
+#define L2_MAX_PROTOCOL_INSTANCES            1024
+#define L2_PROTO_INDEX_MASKS                 (L2_MAX_PROTOCOL_INSTANCES >> 5)
+#define L2_PROTO_INDEX_INVALID               0xFFFF
+
+typedef struct
+{
+    UINT32 m[L2_PROTO_INDEX_MASKS];
+} L2_PROTO_INSTANCE_MASK;
+
+// set the instance bit in the instance mask
+#define L2_PROTO_INSTANCE_MASK_SET(_instance_mask_ptr_, _instance_id_) \
+    ((_instance_mask_ptr_)->m[(_instance_id_) >> 5]) |= (1L<<((_instance_id_)&0x1f))
+
+// clear the instance bit from the instance mask
+#define L2_PROTO_INSTANCE_MASK_CLR(_instance_mask_ptr_, _instance_id_) \
+    ((_instance_mask_ptr_)->m[(_instance_id_) >> 5]) &= ~(1L<<((_instance_id_)&0x1f))
+
+// check if the instance bit is set in the instance mask
+#define L2_PROTO_INSTANCE_MASK_ISSET(_instance_mask_ptr_, _instance_id_) \
+    ((((_instance_mask_ptr_)->m[(_instance_id_) >> 5]) & (1L<<((_instance_id_)&0x1f))) != 0)
+
+// clear all the bits in the instance mask
+#define L2_PROTO_INSTANCE_MASK_ZERO(_instance_mask_ptr_) \
+    memset(_instance_mask_ptr_, 0, sizeof(L2_PROTO_INSTANCE_MASK))
 
 #endif //__L2_H__

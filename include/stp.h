@@ -19,16 +19,8 @@
 #define __STP_H__
 
 /* #defines ----------------------------------------------------------------- */
-#define PORT_MASK BITMAP_T
-#define VLAN_MASK BITMAP_T
-
-#define STP_VERSION_ID 0
-
 #define STP_MESSAGE_AGE_INCREMENT 1
 #define STP_INVALID_PORT 0xFFF
-
-#define STP_OK 0
-#define STP_ERR -1
 
 #define STP_DFLT_PRIORITY 32768
 #define STP_MIN_PRIORITY 0
@@ -60,7 +52,6 @@
 #define STP_FASTUPLINK_FORWARD_DELAY 1
 
 // 802.1d path costs - for backward compatibility with BI
-
 #define STP_LEGACY_MIN_PORT_PATH_COST 1
 #define STP_LEGACY_MAX_PORT_PATH_COST 65535
 #define STP_LEGACY_PORT_PATH_COST_10M 100
@@ -90,6 +81,7 @@
 #define STP_SIZEOF_CONFIG_BPDU 35
 #define STP_SIZEOF_TCN_BPDU 4
 #define STP_BULK_MESG_LENGTH 350
+#define STP_MAX_PKT_LEN 68
 
 #define g_stp_instances stp_global.max_instances
 #define g_stp_active_instances stp_global.active_instances
@@ -114,7 +106,7 @@
 #define g_stp_enable_mask stp_global.enable_mask
 #define g_stp_enable_config_mask stp_global.enable_admin_mask
 
-#define g_sstp_enabled stp_global.sstp_enabled
+#define g_stp_invalid_port_name stp_global.invalid_port_name 
 
 #define STP_GET_MIN_PORT_PATH_COST ((UINT32)(g_stpd_extend_mode ? STP_MIN_PORT_PATH_COST : STP_LEGACY_MIN_PORT_PATH_COST))
 #define STP_GET_MAX_PORT_PATH_COST ((UINT32)(g_stpd_extend_mode ? STP_MAX_PORT_PATH_COST : STP_LEGACY_MAX_PORT_PATH_COST))
@@ -136,6 +128,8 @@
 #define STP_IS_PROTECT_DO_DISABLE_CONFIGURED(_port_) IS_MEMBER(stp_global.protect_do_disable_mask, (_port_))
 #define STP_IS_PROTECT_DO_DISABLED(_port_) IS_MEMBER(stp_global.protect_disabled_mask, (_port_))
 #define STP_IS_ROOT_PROTECT_CONFIGURED(_p_) IS_MEMBER(stp_global.root_protect_mask, (_p_))
+
+#define STP_IS_PROTOCOL_ENABLED(mode) (stp_global.enable == true && stp_global.proto_mode == mode)
 
 // _port_ is a pointer to either STP_PORT_CLASS or RSTP_PORT_CLASS
 #define STP_ROOT_PROTECT_TIMER_EXPIRED(_port_) \
@@ -160,9 +154,24 @@ typedef struct
 	PORT_MASK *port_mask;
 } DEBUG_STP;
 
+typedef struct
+{
+    UINT8            enabled:1;
+    UINT8            verbose:1;
+    UINT8            bpdu_rx:1;
+    UINT8            bpdu_tx:1;
+    UINT8            event:1;
+    UINT8            all_instance:1;
+    UINT8            all_ports:1;
+    UINT8           spare:1;
+    BITMAP_T        *instance_mask;
+    PORT_MASK       *port_mask;
+} DEBUG_MSTP;
+
 typedef struct DEBUG_GLOBAL_TAG
 {
-	DEBUG_STP stp;
+	DEBUG_STP   stp;
+    DEBUG_MSTP  mstp;
 } DEBUG_GLOBAL;
 extern DEBUG_GLOBAL debugGlobal;
 
@@ -181,23 +190,6 @@ extern DEBUG_GLOBAL debugGlobal;
 	(debugGlobal.stp.event && STP_DEBUG_VP(vlan_id, port_number))
 
 #define STP_DEBUG_VERBOSE debugGlobal.stp.verbose
-
-/* logging defines */
-
-#define stplog_new_root(stp_class, src) \
-	// printf("\n stplog_new_root\n")
-
-#define stplog_root_change(stp_class, src) \
-	// printf("\n stplog_root_change\n")
-
-#define stplog_port_state_change(stp_class, port_number, src) \
-	// printf("\n stplog_port_state_change\n")
-
-#define stplog_topo_change(stp_class, port_number, src) \
-	// printf("\n stplog_topo_change\n")
-
-#define stplog_root_port_change(stp_class, port_number, src) \
-	// printf("\n stplog_root_port_change\n")
 
 enum STP_CLASS_STATE
 {
@@ -307,6 +299,8 @@ typedef struct
 	UINT8 operEdge : 1;
 	UINT8 kernel_state : 2; // STP_KERNEL_STATE
 
+    UINT8 bpdu_guard_active:1;
+    UINT8 unused_field:7;
 	UINT32 path_cost;
 
 	BRIDGE_IDENTIFIER designated_root;
@@ -392,9 +386,8 @@ typedef struct
 	UINT32 stp_drop_count;
 	UINT32 tcn_drop_count;
 	UINT32 pvst_drop_count;
+    char   invalid_port_name[IFNAMSIZ];
 } __attribute__((aligned(4))) STP_GLOBAL;
-
-#define INVALID_STP_PARAM ((UINT32)0xffffffff)
 
 /*Below ENUM for RAS STP, please update "stp_ras_state_string" structure when you are adding new event here*/
 typedef enum

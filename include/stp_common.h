@@ -24,9 +24,15 @@
 typedef enum SORT_RETURN
 {
 	LESS_THAN = -1,
-	EQUAL_TO = 0,
+	EQUAL_TO  = 0,
 	GREATER_THAN = 1
 } SORT_RETURN;
+
+#define STP_VERSION_ID      0
+#define RSTP_VERSION_ID     2
+#define MSTP_VERSION_ID     3
+
+#define RSTP_SIZEOF_BPDU	36
 
 #define PORT_MASK BITMAP_T
 

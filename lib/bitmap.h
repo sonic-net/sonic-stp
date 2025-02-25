@@ -58,6 +58,17 @@ typedef struct BITMAP_S{
 
 typedef int32_t BMP_ID;
 
+#define STATIC_BMP_NBITS  4096
+#define STATIC_BMP_SZ     ((STATIC_BMP_NBITS + (BMP_MASK_BITS -1))/BMP_MASK_BITS)
+
+typedef struct STATIC_BITMAP_S{
+    uint16_t nbits;
+    uint16_t size;
+    //until this point members should be in sync with BITMAP_T
+    //Coz, internally we typecast STATIC_BITMAP_T to BITMAP_T
+    unsigned int arr[STATIC_BMP_SZ];
+}STATIC_BITMAP_T;
+
 //
 //For static allocation ,
 // ex:
@@ -97,5 +108,8 @@ BMP_ID bmp_find_first_unset_bit(BITMAP_T *bmp);
 BMP_ID bmp_set_first_unset_bit(BITMAP_T *bmp);
 BMP_ID bmp_get_next_set_bit(BITMAP_T *bmp, BMP_ID id);
 BMP_ID bmp_get_first_set_bit(BITMAP_T *bmp);
+unsigned int bmp_count_set_bits(BITMAP_T *bmp);
+BITMAP_T *static_mask_init(STATIC_BITMAP_T *bmp);
+void static_bmp_init(STATIC_BITMAP_T *vbmp);
 
 #endif //__BITMAP_H__

@@ -175,7 +175,6 @@ typedef struct STPD_CONTEXT {
     //PO node will be created only when 1st Member port is added to the system.
     struct avl_table    *intf_avl_tree;
 
-    //TODO : for performance optimization
     //array of pointers to nodes in avl tree.
     //for faster access by avoiding parsing avl tree.
     int                 **intf_ptr_to_avl_node;
