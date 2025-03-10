@@ -28,6 +28,13 @@
 using namespace std;
 using namespace swss;
 
+extern char mstp_role_string[][20];
+
+// TODO - Remove this after addin to schema 
+#define APP_STP_INST_PORT_FLUSH_TABLE_NAME  "STP_INST_PORT_FLUSH_TABLE"
+#define APP_STP_MST_TABLE_NAME              "STP_MST_INST_TABLE"
+#define APP_STP_MST_PORT_TABLE_NAME         "STP_MST_PORT_TABLE"
+#define APP_STP_MST_NAME_TABLE_NAME         "STP_MST_NAME_TABLE"
 
 StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
     m_stpVlanTable(db, APP_STP_VLAN_TABLE_NAME),
@@ -35,11 +42,13 @@ StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
     m_stpVlanInstanceTable(db, APP_STP_VLAN_INSTANCE_TABLE_NAME),
     m_stpPortTable(db, APP_STP_PORT_TABLE_NAME),
     m_stpPortStateTable(db, APP_STP_PORT_STATE_TABLE_NAME),
-    m_appVlanMemberTable(db, APP_VLAN_MEMBER_TABLE_NAME),
+    m_stpMstTable(db, APP_STP_MST_TABLE_NAME),
+    m_stpMstPortTable(db, APP_STP_MST_PORT_TABLE_NAME),
     m_stpFastAgeFlushTable(db, APP_STP_FASTAGEING_FLUSH_TABLE_NAME),
+    m_stpInstancePortFlushTable(db, APP_STP_INST_PORT_FLUSH_TABLE_NAME),
     m_appPortTable(db, APP_PORT_TABLE_NAME),
-    m_cfgPortTable(cfgDb, CFG_PORT_TABLE_NAME),
-    m_cfgLagTable(cfgDb, CFG_LAG_TABLE_NAME)
+	m_cfgPortTable(cfgDb, CFG_PORT_TABLE_NAME),
+	m_cfgLagTable(cfgDb, CFG_LAG_TABLE_NAME)
 {
     SWSS_LOG_NOTICE("STP: sync object");
 }
@@ -90,17 +99,6 @@ extern "C" {
         stpsync.delStpPortState(ifName, instance);
     }
    
-#if 0
-    void stpsync_update_vlan_port_state(char * ifName, uint16_t vlan_id, uint8_t state)
-    {
-        stpsync.updateStpVlanPortState(ifName, vlan_id, state);
-    }
-    
-    void stpsync_del_vlan_port_state(char * ifName, uint16_t vlan_id)
-    {
-        stpsync.delStpVlanPortState(ifName, vlan_id);
-    }
-#endif
     void stpsync_update_fastage_state(uint16_t vlan_id, bool add)
     {
         stpsync.updateStpVlanFastage(vlan_id, add);
@@ -134,6 +132,36 @@ extern "C" {
     void stpsync_clear_appdb_stp_tables(void)
     {
         stpsync.clearAllStpAppDbTables();
+    }
+    
+    void stpsync_flush_instance_port(char *ifName, uint16_t instance)
+    {
+        stpsync.flushStpInstancePort(ifName, instance);
+    }
+
+    void stpsync_update_mst_info(STP_MST_TABLE * stp_mst)
+    {
+        stpsync.updateStpMstInfo(stp_mst);
+    }
+
+    void stpsync_del_mst_info(uint16_t mst_id)
+    {
+        stpsync.delStpMstInfo(mst_id);
+    }
+
+    void stpsync_update_mst_port_info(STP_MST_PORT_TABLE * stp_mst_intf)
+    {
+        stpsync.updateStpMstInterfaceInfo(stp_mst_intf);
+    }
+
+    void stpsync_del_mst_port_info(char *if_name, uint16_t mst_id)
+    {
+        stpsync.delStpMstInterfaceInfo(if_name, mst_id);
+    }
+
+    void stpsync_update_boundary_port(char * ifName, bool enabled, char *proto)
+    {
+        stpsync.updateBoundaryPort(ifName, enabled, proto);
     }
 }
 
@@ -414,37 +442,6 @@ void StpSync::delStpPortState(char * if_name, uint16_t instance)
     SWSS_LOG_NOTICE("Delete STP port:%s instance:%d", ifName.c_str(), instance);
 }
 
-#if 0
-void StpSync::updateStpVlanPortState(char * if_name, uint16_t vlan_id, uint8_t state)
-{
-    std::string ifName(if_name);
-    std::vector<FieldValueTuple> fvVector;
-    std::string key = ifName;
-    string vlan;
-
-    vlan = VLAN_PREFIX + to_string(vlan_id);
-    key = vlan + ':' + ifName;
-
-    FieldValueTuple o("stp_state", to_string(state));
-    
-    m_appVlanMemberTable.set(key, fvVector);
-    
-    SWSS_LOG_NOTICE(" Update STP VLAN %s port %s state %d", vlan.c_str(), if_name, state);
-}
-
-void StpSync::delStpVlanPortState(char * if_name, uint16_t vlan_id)
-{
-    std::string ifName(if_name);
-    std::string key = ifName;
-    string vlan;
-
-    vlan = VLAN_PREFIX + to_string(vlan_id);
-    key = vlan + ':' + ifName;
-    m_appVlanMemberTable.del(key);
-    
-    SWSS_LOG_NOTICE(" Delete STP VLAN %s port %s", vlan.c_str(), if_name);
-}
-#endif
 void StpSync::updateStpVlanFastage(uint16_t vlan_id, bool add)
 {
     string vlan;
@@ -549,7 +546,263 @@ void StpSync::clearAllStpAppDbTables(void)
     //m_stpVlanInstanceTable.clear();
     m_stpPortTable.clear();
     //m_stpPortStateTable.clear();
-    //m_appVlanMemberTable.clear();
     m_stpFastAgeFlushTable.clear();
     SWSS_LOG_NOTICE("STP clear all APP DB STP tables");
+}
+void StpSync::flushStpInstancePort(char *if_name, uint16_t instance)
+{
+    std::string ifName(if_name);
+    std::vector<FieldValueTuple> fvVector;
+    string key;
+
+    key = to_string(instance) + ':' + ifName;
+
+    FieldValueTuple o("state", "true");
+    fvVector.push_back(o);
+
+    m_stpInstancePortFlushTable.set(key, fvVector);
+
+    SWSS_LOG_INFO("STP port instance flush: %d %s", instance, if_name);
+}
+void StpSync::updateStpMstInfo(STP_MST_TABLE * stp_mst)
+{
+    std::vector<FieldValueTuple> fvVector;
+    string mstid;
+
+    mstid =  to_string(stp_mst->mst_id);
+    
+    if(stp_mst->vlan_mask[0] != '\0')
+    {
+        FieldValueTuple vlan("vlan@", stp_mst->vlan_mask);
+        fvVector.push_back(vlan);
+    } 
+
+    if(stp_mst->bridge_id[0] != '\0')
+    {
+        FieldValueTuple br("bridge_address", stp_mst->bridge_id);
+        fvVector.push_back(br);
+    }
+
+    if(stp_mst->root_bridge_id[0] != '\0')
+    {
+        FieldValueTuple rb("root_address", stp_mst->root_bridge_id);
+        fvVector.push_back(rb);
+    }
+
+    if(stp_mst->reg_root_bridge_id[0] != '\0')
+    {
+        FieldValueTuple rrb("regional_root_address", stp_mst->reg_root_bridge_id);
+        fvVector.push_back(rrb);
+    }
+
+    if(stp_mst->root_path_cost != 0xFFFFFFFF)
+    {
+        FieldValueTuple rpc("root_path_cost", to_string(stp_mst->root_path_cost));
+        fvVector.push_back(rpc);
+    }
+
+    if(stp_mst->in_root_path_cost != 0xFFFFFFFF)
+    {
+        FieldValueTuple inrpc("regional_root_cost", to_string(stp_mst->in_root_path_cost));
+        fvVector.push_back(inrpc);
+    }
+
+    if(stp_mst->root_hello_time)
+    {
+        FieldValueTuple hello("root_hello_time", to_string(stp_mst->root_hello_time));
+        fvVector.push_back(hello);
+    }
+    if(stp_mst->root_forward_delay)
+    {
+        FieldValueTuple fwd_delay("root_forward_delay", to_string(stp_mst->root_forward_delay));
+        fvVector.push_back(fwd_delay);
+    }
+    if(stp_mst->root_max_age)
+    {
+        FieldValueTuple max_age("root_max_age", to_string(stp_mst->root_max_age));
+        fvVector.push_back(max_age);
+    }
+
+    if(stp_mst->tx_hold_count)
+    {
+        FieldValueTuple ht("hold_time", to_string(stp_mst->tx_hold_count));
+        fvVector.push_back(ht);
+    }
+
+    if(stp_mst->root_port[0] != '\0')
+    {
+        FieldValueTuple rp("root_port", stp_mst->root_port);
+        fvVector.push_back(rp);
+    }
+
+    if(stp_mst->rem_hops != 0xFF)
+    {
+        FieldValueTuple rem("remaining_hops", to_string(stp_mst->rem_hops));
+        fvVector.push_back(rem);
+    }
+
+    if(stp_mst->bridge_priority != 0xFFFF)
+    {
+        FieldValueTuple rem("bridge_priority", to_string(stp_mst->bridge_priority));
+        fvVector.push_back(rem);
+    }
+ 
+    m_stpMstTable.set(mstid, fvVector);
+
+    SWSS_LOG_INFO("Update STP_MST_TABLE for %d", stp_mst->mst_id);
+
+}
+
+void StpSync::delStpMstInfo(uint16_t mst_id)
+{
+    string mstid; 
+   
+    mstid =  to_string(mst_id);
+
+    m_stpMstTable.del(mstid);
+    SWSS_LOG_INFO("Delete STP_MST_TABLE for %d", mst_id);
+}
+void StpSync::updateStpMstInterfaceInfo(STP_MST_PORT_TABLE * stp_mst_intf)
+{
+    std::string ifName(stp_mst_intf->if_name);
+    std::vector<FieldValueTuple> fvVector;
+    string mst_id, key;
+    uint8_t log = true;
+
+    if(stp_mst_intf->port_id != 0xFFFF)
+    {
+        FieldValueTuple pi("port_number", to_string(stp_mst_intf->port_id));
+        fvVector.push_back(pi);
+    }
+
+    if(stp_mst_intf->port_priority != 0xFF)
+    {
+        FieldValueTuple pp("priority", to_string(stp_mst_intf->port_priority));
+        fvVector.push_back(pp);
+    }
+
+    if(stp_mst_intf->path_cost != 0xFFFFFFFF)
+    {
+        FieldValueTuple pcost("path_cost", to_string(stp_mst_intf->path_cost));
+        fvVector.push_back(pcost);
+    }
+    
+    if(stp_mst_intf->port_state[0] != '\0')
+    {
+        FieldValueTuple ps("port_state", stp_mst_intf->port_state);
+        fvVector.push_back(ps);
+    }
+    
+
+    if(stp_mst_intf->designated_cost != 0xFFFFFFFF)
+    {
+        FieldValueTuple exp("desig_cost", to_string(stp_mst_intf->designated_cost));
+        fvVector.push_back(exp);
+    }
+
+    if(stp_mst_intf->external_cost != 0xFFFFFFFF)
+    {
+        FieldValueTuple ipc("external_cost", to_string(stp_mst_intf->external_cost));
+        fvVector.push_back(ipc);
+    }
+
+    if(stp_mst_intf->designated_root[0] != '\0')
+    {
+        FieldValueTuple dr("desig_root", stp_mst_intf->designated_root);
+        fvVector.push_back(dr);
+    }
+ 
+    if(stp_mst_intf->designated_reg_root[0] != '\0')
+    {
+        FieldValueTuple drr("desig_reg_root", stp_mst_intf->designated_reg_root);
+        fvVector.push_back(drr);
+    }   
+    if(stp_mst_intf->designated_bridge[0] != '\0')
+    {
+        FieldValueTuple db("desig_bridge", stp_mst_intf->designated_bridge);
+        fvVector.push_back(db);
+    }
+    
+    if(stp_mst_intf->designated_port != 0)
+    {
+        FieldValueTuple dp("desig_port", to_string(stp_mst_intf->designated_port));
+        fvVector.push_back(dp);
+    }
+
+    if(stp_mst_intf->forward_transitions != 0)
+    {
+        FieldValueTuple ft("fwd_transitions", to_string(stp_mst_intf->forward_transitions));
+        fvVector.push_back(ft);
+    }
+
+    if((stp_mst_intf->tx_bpdu != 0) || stp_mst_intf->clear_stats)
+    {
+        FieldValueTuple tcb("bpdu_sent", to_string(stp_mst_intf->tx_bpdu));
+        fvVector.push_back(tcb);
+        log = false;
+    }
+    
+    if((stp_mst_intf->rx_bpdu != 0) || stp_mst_intf->clear_stats)
+    {
+        FieldValueTuple rcb("bpdu_received", to_string(stp_mst_intf->rx_bpdu));
+        fvVector.push_back(rcb);
+        log = false;
+    }
+
+    if(stp_mst_intf->port_role != 0xFF)
+    {
+        FieldValueTuple role("role",mstp_role_string[stp_mst_intf->port_role]);
+        fvVector.push_back(role);
+    }
+    if(stp_mst_intf->rem_time != 0xFF)
+    {
+        FieldValueTuple rem("rem_time", to_string(stp_mst_intf->rem_time));
+        fvVector.push_back(rem);
+        log = false;
+    }
+
+    mst_id = to_string(stp_mst_intf->mst_id);
+    key = mst_id + ":" + ifName;
+
+    m_stpMstPortTable.set(key, fvVector);
+
+    if(log)
+        SWSS_LOG_INFO("Update STP_MST_PORT_TABLE for %s intf %s", mst_id.c_str(), ifName.c_str());
+}
+
+void StpSync::delStpMstInterfaceInfo(char *if_name, uint16_t mst_id)
+{
+    std::string ifName(if_name);
+    string mstid, key;
+    
+    mstid = to_string(mst_id);
+    key = mstid + ":" + ifName;
+    
+    m_stpMstPortTable.del(key);
+
+    SWSS_LOG_INFO("Delete STP_MST_PORT_TABLE for %s intf %s", mstid.c_str(), ifName.c_str());
+}
+void StpSync::updateBoundaryPort(char *if_name, bool enabled, char *proto)
+{
+    std::vector<FieldValueTuple> fvVector;
+    std::string ifName(if_name);
+    std::string key = ifName;
+
+    if(enabled)
+    {
+        FieldValueTuple boundary("mst_boundary", "yes");
+        fvVector.push_back(boundary);
+        FieldValueTuple bproto("mst_boundary_proto", proto);
+        fvVector.push_back(bproto);
+    }
+    else
+    {
+        FieldValueTuple boundary("mst_boundary", "no");
+        fvVector.push_back(boundary);
+        FieldValueTuple bproto("mst_boundary_proto", "");
+        fvVector.push_back(bproto);
+    }
+    m_stpPortTable.set(key, fvVector);
+
+    SWSS_LOG_INFO("STP %s Boundary %s", if_name, enabled ? "yes" : "no");
 }
