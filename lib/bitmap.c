@@ -340,3 +340,29 @@ int8_t bmp_alloc(BITMAP_T **bmp, uint16_t nbits)
     return bmp_init(*bmp);
 }
 
+unsigned int bmp_count_set_bits(BITMAP_T *bmp)
+{
+    uint16_t i;
+    unsigned int count = 0;
+    unsigned int temp = 0;
+    for (i=0;i<bmp->size;i++)
+    {
+        if (!bmp->arr[i])
+            continue;
+        temp = bmp->arr[i];
+        while (temp)
+        {
+            count++;
+            temp = temp & (temp - 1);
+        }
+    }
+    return count;
+}
+
+void static_bmp_init(STATIC_BITMAP_T *bmp)
+{
+    bmp->nbits = STATIC_BMP_NBITS;
+    bmp->size = STATIC_BMP_SZ;
+    memset(&bmp->arr, 0, STATIC_BMP_SZ * sizeof(unsigned int));
+    return;
+}
