@@ -48,6 +48,7 @@
 #include "stp_externs.h"
 #include "stp_dbsync.h"
 
-
+#include "mstp_common.h"
+#include "mstp.h"
 
 #endif //__STP_INC_H__

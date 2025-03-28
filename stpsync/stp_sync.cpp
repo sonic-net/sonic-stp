@@ -47,8 +47,8 @@ StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
     m_stpFastAgeFlushTable(db, APP_STP_FASTAGEING_FLUSH_TABLE_NAME),
     m_stpInstancePortFlushTable(db, APP_STP_INST_PORT_FLUSH_TABLE_NAME),
     m_appPortTable(db, APP_PORT_TABLE_NAME),
-	m_cfgPortTable(cfgDb, CFG_PORT_TABLE_NAME),
-	m_cfgLagTable(cfgDb, CFG_LAG_TABLE_NAME)
+    m_cfgPortTable(cfgDb, CFG_PORT_TABLE_NAME),
+    m_cfgLagTable(cfgDb, CFG_LAG_TABLE_NAME)
 {
     SWSS_LOG_NOTICE("STP: sync object");
 }

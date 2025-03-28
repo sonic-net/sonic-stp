@@ -42,7 +42,6 @@ AC_SUBST(CFLAGS_COMMON)
 AC_CONFIG_FILES([
     include/Makefile
     lib/Makefile
-    stp/Makefile
     stpctl/Makefile
     Makefile
 ])
