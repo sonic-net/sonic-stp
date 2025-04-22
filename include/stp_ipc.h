@@ -182,6 +182,7 @@ typedef struct STP_CTL_MSG
     char intf_name[IFNAMSIZ];
     int level;
     STP_DEBUG_OPT dbg;
+    int mst_id;
 } __attribute__((aligned(4))) STP_CTL_MSG;
 
 #endif
