@@ -304,9 +304,6 @@ void stpmgr_disable_port(STP_CLASS *stp_class, PORT_ID port_number)
 		stptimer_stop(&stp_class->tcn_timer);
 		config_bpdu_generation(stp_class);
 		stptimer_start(&stp_class->hello_timer, 0);
-
-		stplog_topo_change(stp_class, port_number, STP_DISABLE_PORT);
-		stplog_new_root(stp_class, STP_DISABLE_PORT);
 	}
 }
 
@@ -349,15 +346,6 @@ void stpmgr_set_bridge_priority(STP_CLASS *stp_class, BRIDGE_IDENTIFIER *bridge_
 			stptimer_stop(&stp_class->tcn_timer);
 			config_bpdu_generation(stp_class);
 			stptimer_start(&stp_class->hello_timer, 0);
-
-			stplog_new_root(stp_class, STP_CHANGE_PRIORITY);
-		}
-	}
-	else
-	{
-		if (root)
-		{
-			stplog_root_change(stp_class, STP_CHANGE_PRIORITY);
 		}
 	}
 }
@@ -754,14 +742,6 @@ bool stpmgr_release_index(STP_INDEX stp_index)
 	if (stp_class->state == STP_CLASS_FREE)
 		return true; // already released
 
-#if 0
-	// unset sstp for control vlan
-	if (stp_class->vlan_id == CONTROL_VLAN)
-	{
-		g_sstp_enabled = false;
-	}
-#endif
-
 	clear_mask(stp_class->enable_mask);
 	stpmgr_deactivate_stp_class(stp_class);
 
@@ -1084,7 +1064,7 @@ void stpmgr_config_fastuplink(PORT_ID port_number, bool enable)
  * RETURN VALUE
  *		true if it is "spanning protect"; false otherwise.
  */
-static bool stpmgr_protect_process(PORT_ID rx_port, uint16_t vlan_id)
+bool stpmgr_protect_process(PORT_ID rx_port, uint16_t vlan_id)
 {
 
 	if (!STP_IS_PROTECT_CONFIGURED(rx_port) && !STP_IS_PROTECT_DO_DISABLE_CONFIGURED(rx_port))
@@ -1151,7 +1131,7 @@ static bool stpmgr_config_fastspan(PORT_ID port_id, bool enable)
  * NOTES
  *		The protection mask is (protect_mask || protect_do_disable_mask).
  */
-static bool stpmgr_config_protect(PORT_ID port_id, bool enable, bool do_disable)
+bool stpmgr_config_protect(PORT_ID port_id, bool enable, bool do_disable)
 {
 	bool ret = true;
 
@@ -1184,7 +1164,7 @@ static bool stpmgr_config_protect(PORT_ID port_id, bool enable, bool do_disable)
 /* stpmgr_config_root_protect: enables/disables root-guard feature on the    */
 /* input mask.                                                               */
 /*****************************************************************************/
-static bool stpmgr_config_root_protect(PORT_ID port_id, bool enable)
+bool stpmgr_config_root_protect(PORT_ID port_id, bool enable)
 {
 	if (enable)
         set_mask_bit(stp_global.root_protect_mask, port_id);
@@ -1685,7 +1665,7 @@ static void stpmgr_process_intf_config_msg(void *msg)
         if (pmsg->priority != -1)
             stp_intf_set_port_priority(port_id, pmsg->priority);
         if (pmsg->path_cost)
-            stp_intf_set_path_cost(port_id, pmsg->path_cost);
+            stp_intf_set_path_cost(port_id, pmsg->path_cost, false);
 
         attr = pmsg->vlan_list;
         for (inst_count = 0; inst_count < pmsg->count; inst_count++)
@@ -1727,7 +1707,7 @@ static void stpmgr_process_intf_config_msg(void *msg)
         /* Interface is deleted either due to non-L2 and PO delete */
         stp_intf_set_port_priority(port_id, STP_DFLT_PORT_PRIORITY);
         path_cost = stputil_get_default_path_cost(port_id, g_stpd_extend_mode);
-        stp_intf_set_path_cost(port_id, path_cost);
+        stp_intf_set_path_cost(port_id, path_cost, true);
     }
 
     if (pmsg->opcode == STP_DEL_COMMAND || !pmsg->enabled)
