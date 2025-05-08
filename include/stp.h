@@ -128,20 +128,6 @@
 #define SET_STP_PER_VLAN_FLAG(_stp_port_class, _flag) (_stp_port_class->flags |= _flag)
 #define CLR_STP_PER_VLAN_FLAG(_stp_port_class, _flag) (_stp_port_class->flags &= ~(_flag))
 
-typedef struct
-{
-    UINT8            enabled:1;
-    UINT8            verbose:1;
-    UINT8            bpdu_rx:1;
-    UINT8            bpdu_tx:1;
-    UINT8            event:1;
-    UINT8            all_instance:1;
-    UINT8            all_ports:1;
-    UINT8           spare:1;
-    BITMAP_T        *instance_mask;
-    PORT_MASK       *port_mask;
-} DEBUG_MSTP;
-
 // debug macros
 typedef struct
 {
