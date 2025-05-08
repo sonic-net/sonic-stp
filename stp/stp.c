@@ -499,7 +499,6 @@ void make_forwarding(STP_CLASS *stp_class, PORT_ID port_number)
         stputil_set_port_state(stp_class, stp_port_class);
 		stptimer_start(&stp_port_class->forward_delay_timer, 0);
 
-		stplog_port_state_change(stp_class, port_number, STP_MAKE_FORWARDING);
 		if (STP_DEBUG_EVENT(stp_class->vlan_id, port_number))
 		{
 			STP_LOG_DEBUG("LISTENING Vlan:%d Port:%d", stp_class->vlan_id, port_number);
@@ -527,11 +526,6 @@ void make_blocking(STP_CLASS *stp_class, PORT_ID port_number)
 				!STP_IS_FASTSPAN_ENABLED(port_number))
 			{
 				topology_change_detection(stp_class);
-				stplog_topo_change(stp_class, port_number, STP_MAKE_BLOCKING);
-				if (stp_port_class->state == FORWARDING) {
-                    //TODO:Find Alternate for SNMP_TRAP
-                    //send_stp_topo_change_trap();
-				}
 			}
 			// fall thru
 
@@ -547,8 +541,7 @@ void make_blocking(STP_CLASS *stp_class, PORT_ID port_number)
 					port_number, stp_port_class->state);
 			return;
 	}
-
-	stplog_port_state_change(stp_class, port_number, STP_MAKE_BLOCKING);	
+	
     STP_LOG_INFO("STP_RAS_BLOCKING I:%lu P:%lu V:%lu",GET_STP_INDEX(stp_class),port_number, stp_class->vlan_id);
 } 
 
@@ -629,8 +622,6 @@ void received_config_bpdu(STP_CLASS *stp_class, PORT_ID port_number, STP_CONFIG_
 				transmit_tcn(stp_class);
 				stptimer_start(&stp_class->tcn_timer, 0);
 			}
-
-			stplog_root_change(stp_class, STP_BPDU_RECEIVED);
 		}
 
 		if (port_number == stp_class->bridge_info.root_port)
@@ -750,9 +741,6 @@ void message_age_timer_expiry(STP_CLASS *stp_class, PORT_ID port_number)
 		stptimer_stop(&stp_class->tcn_timer);
 		config_bpdu_generation(stp_class);
 		stptimer_start(&stp_class->hello_timer, 0);
-
-		stplog_topo_change(stp_class, port_number, STP_MESSAGE_AGE_EXPIRY);
-		stplog_new_root(stp_class, STP_MESSAGE_AGE_EXPIRY);
 	}
 }
 
@@ -782,7 +770,6 @@ void forwarding_delay_timer_expiry(STP_CLASS *stp_class, PORT_ID port_number)
 					!STP_IS_FASTSPAN_ENABLED(port_number))
 				{
 					topology_change_detection(stp_class);
-					stplog_topo_change(stp_class, port_number, STP_FWD_DLY_EXPIRY);
 				}
 			}
 
@@ -795,7 +782,6 @@ void forwarding_delay_timer_expiry(STP_CLASS *stp_class, PORT_ID port_number)
 
     SET_BIT(stp_port_class->modified_fields, STP_PORT_CLASS_MEMBER_PORT_STATE_BIT);
 	stputil_set_port_state(stp_class, stp_port_class);
-	stplog_port_state_change(stp_class, port_number, STP_FWD_DLY_EXPIRY);
 	if (STP_DEBUG_EVENT(stp_class->vlan_id, port_number))
 	{
 		STP_LOG_DEBUG("%s Vlan:%d Port:%d", l2_port_state_to_string(stp_port_class->state, port_number), stp_class->vlan_id, port_number);
@@ -879,11 +865,7 @@ void send_config_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
 {
 	STP_PORT_CLASS *stp_port_class = GET_STP_PORT_CLASS(stp_class, port_number);
 	
-
-	if (!g_sstp_enabled)
-		stputil_send_pvst_bpdu(stp_class, port_number, CONFIG_BPDU_TYPE);
-	else
-		stputil_send_bpdu(stp_class, port_number, CONFIG_BPDU_TYPE);
+	stputil_send_pvst_bpdu(stp_class, port_number, CONFIG_BPDU_TYPE);
 }
 
 void send_tcn_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
@@ -895,8 +877,5 @@ void send_tcn_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
 	if (stptimer_is_active(&stp_port_class->root_protect_timer))
 		return;
 	
-	if (!g_sstp_enabled)
-		stputil_send_pvst_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
-	else
-		stputil_send_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
+	stputil_send_pvst_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
 }

@@ -18,10 +18,11 @@ libstp_a_SOURCES = stp/stp.c stp/stp_pkt.c stp/stp_data.c stp/stp_debug.c stp/st
 stpd_SOURCES = stpd_main.cpp stpsync/stp_sync.cpp
 
 stpd_CPPFLAGS = $(DBGFLAGS) $(AM_CFLAGS) $(CFLAGS_COMMON) $(COV_CFLAGS)
-stpd_LDADD = -lhiredis -lswsscommon \
+stpd_LDADD = -lhiredis -lswsscommon -lcrypto \
 			 $(LIBDAEMON_LIBS) \
 	         lib/libcommonstp.a \
 	         libstp.a \
 	         lib/libcommonstp.a \
+			 -lcrypto \
 	         -levent \
 			 $(COV_LDFLAGS)

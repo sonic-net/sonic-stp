@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <linux/filter.h>
 #include <linux/if_packet.h>
+#include <openssl/hmac.h>
 #include "stp_debug.h"
 #include "l2.h"
 #include "stp_timer.h"
@@ -37,6 +38,7 @@
 #include "stp_main.h"
 #include "stp_externs.h"
 #include "stp_dbsync.h"
+#include "stp_debug.h"
 
 #include "mstp_common.h"
 #include "mstp.h"
