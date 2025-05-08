@@ -1,18 +1,6 @@
 /*
  * Copyright 2019 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or
  * its subsidiaries.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 #ifndef __STP_IPC_H__
@@ -20,11 +8,20 @@
 
 #define STPD_SOCK_NAME "/var/run/stpipc.sock"
 
+#define STP_SYNC_MSTP_NAME_LEN          32
+
 typedef enum L2_PROTO_MODE
 {
     L2_NONE,
     L2_PVSTP,
+    L2_MSTP
 } L2_PROTO_MODE;
+
+typedef enum LINK_TYPE{
+    LINK_TYPE_AUTO,
+    LINK_TYPE_PT2PT,
+    LINK_TYPE_SHARED
+}LINK_TYPE;
 
 typedef enum STP_MSG_TYPE
 {
@@ -36,6 +33,10 @@ typedef enum STP_MSG_TYPE
     STP_PORT_CONFIG,
     STP_VLAN_MEM_CONFIG,
     STP_STPCTL_MSG,
+    STP_MST_GLOBAL_CONFIG,
+    STP_MST_INST_CONFIG,
+    STP_MST_VLAN_PORT_LIST_CONFIG,
+    STP_MST_INST_PORT_CONFIG,
     STP_MAX_MSG
 } STP_MSG_TYPE;
 
@@ -56,6 +57,8 @@ typedef enum STP_CTL_TYPE
     STP_CTL_CLEAR_VLAN,
     STP_CTL_CLEAR_INTF,
     STP_CTL_CLEAR_VLAN_INTF,
+    STP_CTL_DUMP_MST,
+    STP_CTL_DUMP_MST_PORT,
     STP_CTL_MAX
 } STP_CTL_TYPE;
 
@@ -63,6 +66,7 @@ typedef struct STP_IPC_MSG
 {
     int msg_type;
     unsigned int msg_len;
+    L2_PROTO_MODE proto_mode;
     char data[0];
 } __attribute__((aligned(4))) STP_IPC_MSG;
 
@@ -133,6 +137,7 @@ typedef struct STP_PORT_CONFIG_MSG
     uint8_t bpdu_guard_do_disable;
     uint8_t portfast;
     uint8_t uplink_fast;
+    int edge;
     uint16_t padding;
     int path_cost;
     int priority;
@@ -153,6 +158,67 @@ typedef struct STP_VLAN_MEM_CONFIG_MSG
     int priority;
 } __attribute__((aligned(4))) STP_VLAN_MEM_CONFIG_MSG;
 
+typedef struct STP_MST_GLOBAL_CONFIG_MSG {
+    uint8_t     opcode; // enable/disable
+    uint16_t    revision_number;
+    char        name[STP_SYNC_MSTP_NAME_LEN];
+    int         forward_delay;
+    int         hello_time;
+    int         max_age;
+    int         max_hop;
+}__attribute__((aligned(4))) STP_MST_GLOBAL_CONFIG_MSG;
+
+
+typedef struct VLAN_LIST{
+    uint16_t    vlan_id;
+} __attribute__((aligned(2)))VLAN_LIST;
+
+typedef struct MST_INST_CONFIG_MSG
+{
+    uint8_t     opcode; // enable/disable
+    uint16_t    mst_id;
+    int         priority;
+    uint16_t    vlan_count;
+    VLAN_LIST   vlan_list[0];
+} __attribute__((aligned(4))) MST_INST_CONFIG_MSG;
+
+typedef struct STP_MST_INSTANCE_CONFIG_MSG {
+    uint8_t    mst_count;
+    MST_INST_CONFIG_MSG mst_list[0];
+} __attribute__((aligned(4))) STP_MST_INSTANCE_CONFIG_MSG;
+
+typedef struct STP_MST_INST_PORT_CONFIG_MSG {
+    uint8_t     opcode; // enable/disable
+    char        intf_name[IFNAMSIZ];
+    uint16_t    mst_id;
+    int         path_cost;
+    int         priority;
+}__attribute__((aligned(4))) STP_MST_INST_PORT_CONFIG_MSG;
+
+typedef struct PORT_LIST
+{
+    char        intf_name[IFNAMSIZ];
+    int8_t      tagging_mode;
+}PORT_LIST;
+
+typedef struct STP_MST_VLAN_PORT_MAP
+{
+    uint16_t    vlan_id;
+    uint16_t    port_count;
+    int8_t      stp_mode;
+    uint8_t     add;    
+    PORT_LIST   port_list[0];
+}__attribute__((aligned(4))) STP_MST_VLAN_PORT_MAP;
+
+typedef struct MSTP_INST_VLAN_LIST
+{
+    uint8_t     opcode; // enable/disable
+    uint16_t    mst_id;
+    int         priority;
+    uint16_t    vlan_count;
+    VLAN_LIST   vlan_list[4094];
+}__attribute__((aligned(4))) MSTP_INST_VLAN_LIST;
+
 typedef struct STP_DEBUG_OPT
 {
 #define STPCTL_DBG_SET_ENABLED 0x0001
@@ -172,7 +238,7 @@ typedef struct STP_DEBUG_OPT
     uint8_t event : 1;
     uint8_t port : 1;
     uint8_t vlan : 1;
-    uint8_t spare : 1;
+    uint8_t mst : 1;
 } __attribute__((aligned(4))) STP_DEBUG_OPT;
 
 typedef struct STP_CTL_MSG
@@ -182,6 +248,7 @@ typedef struct STP_CTL_MSG
     char intf_name[IFNAMSIZ];
     int level;
     STP_DEBUG_OPT dbg;
+    int mst_id;
 } __attribute__((aligned(4))) STP_CTL_MSG;
 
 #endif

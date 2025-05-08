@@ -98,6 +98,9 @@ extern struct event *stpmgr_libevent_create(struct event_base *base, evutil_sock
 extern void stpmgr_process_rx_bpdu(uint16_t vlan_id, uint32_t port_id, unsigned char *pkt);
 extern void stpmgr_libevent_destroy(struct event *ev);
 extern void stpmgr_clear_statistics(VLAN_ID vlan_id, PORT_ID port_number);
+extern bool stpmgr_protect_process(PORT_ID rx_port, uint16_t vlan_id);
+extern bool stpmgr_config_protect(PORT_ID port_id, bool enable, bool do_disable);
+extern bool stpmgr_config_root_protect(PORT_ID port_id, bool enable);
 
 /* stp_util.c */
 extern bool stputil_is_protocol_enabled(L2_PROTO_MODE proto_mode);
@@ -134,8 +137,9 @@ extern void stptimer_stop(TIMER *sptr_timer);
 extern bool stptimer_expired(TIMER *timer, UINT32 timer_limit_in_seconds);
 extern bool stptimer_is_active(TIMER * timer);
 extern int mask_to_string(BITMAP_T *bmp, uint8_t *str, uint32_t maxlen);
-
-
+extern void stptimer_100ms_tick(evutil_socket_t fd, short what, void *arg);
+extern int mask_to_string2(BITMAP_T *bmp, uint8_t *str, uint32_t maxlen);
+extern int vlanmask_to_string(BITMAP_T *mask, uint8_t *str, uint32_t maxlen);
 
 /* stp_data.c */
 extern bool stpdata_init_global_structures(UINT16 max_instances);
@@ -200,4 +204,7 @@ extern int stp_pkt_tx_handler ( uint32_t kif_index, VLAN_ID vlan_id, char *buffe
 extern void stpdbg_process_ctl_msg(void *msg);
 extern PORT_ID stp_intf_handle_po_preconfig(char * ifname);
 extern bool stputil_set_kernel_bridge_port_state(STP_CLASS * stp_class, STP_PORT_CLASS * stp_port_class);
+extern VLAN_ID vlanmask_get_first_vlan(void *bmp);
+extern VLAN_ID vlanmask_get_next_vlan(void *bmp,VLAN_ID vlan);
+
 #endif //__STP_EXTERNS_H__
