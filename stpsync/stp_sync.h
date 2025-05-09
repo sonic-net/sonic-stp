@@ -45,6 +45,12 @@ namespace swss {
             void delStpInterface(char * ifName);
             void updatePortFast(char * ifName, bool disabled);
             void clearAllStpAppDbTables(void);
+            void flushStpInstancePort(char *if_name, uint16_t instance);
+            void updateStpMstInfo(STP_MST_TABLE * stp_mst);
+            void delStpMstInfo(uint16_t mst_id);
+            void updateStpMstInterfaceInfo(STP_MST_PORT_TABLE * stp_mst_intf);
+            void delStpMstInterfaceInfo(char * if_name, uint16_t mst_id);
+            void updateBoundaryPort(char *if_name, bool enabled, char *proto);
 
         protected:
         private:
@@ -53,12 +59,13 @@ namespace swss {
             ProducerStateTable m_stpVlanInstanceTable;
             ProducerStateTable m_stpPortTable;
             ProducerStateTable m_stpPortStateTable; 
-            ProducerStateTable m_appVlanMemberTable;
-            ProducerStateTable m_stpFastAgeFlushTable; 
+            ProducerStateTable m_stpMstTable;
+            ProducerStateTable m_stpMstPortTable;
+            ProducerStateTable m_stpFastAgeFlushTable;
+            ProducerStateTable m_stpInstancePortFlushTable; 
             Table m_appPortTable;
             Table m_cfgPortTable;
             Table m_cfgLagTable;
-
     };
 
 }

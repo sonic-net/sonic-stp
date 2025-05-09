@@ -7,60 +7,6 @@
 
 extern UINT8 g_stp_base_mac[L2_ETH_ADD_LEN];
 
-
-/*****************************************************************************/
-/* mstputil_get_msti_port: returns the msti port structure for the input     */
-/* mstid                                                                     */
-/*****************************************************************************/
-MSTP_MSTI_PORT * mstputil_get_msti_port(MSTP_MSTID mstid, PORT_ID port_number)
-{
-	MSTP_PORT *mstp_port = mstpdata_get_port(port_number);
-	MSTP_INDEX mstp_index;
-
-	if (mstp_port == NULL)
-		return NULL;
-
-	mstp_index = mstputil_get_index(mstid);
-	if (mstp_index == MSTP_INDEX_INVALID)
-		return NULL;
-
-	return MSTP_GET_MSTI_PORT(mstp_port, mstp_index);
-}
-
-/*****************************************************************************/
-/* mstputil_compute_message_digest: computes the message digest using md5    */
-/* of the vlan to mstid mapping table                                        */
-/*****************************************************************************/
-void mstputil_compute_message_digest(bool print)
-{
-	MSTP_BRIDGE *mstp_bridge = mstpdata_get_bridge();
-	UINT8 key[16] = MSTP_CONFIG_DIGEST_SIGNATURE_KEY;
-	int md_len = 0; 
-	unsigned char *md5_ptr = NULL; 
-
-	memset(mstp_bridge->mstConfigId.config_digest,
-		0, sizeof(mstp_bridge->mstConfigId.config_digest));
-
-	/* PKCS11 HMAC_CALC function */
-	md5_ptr = HMAC(EVP_md5(), key, sizeof(key),
-			(unsigned char *) &mstp_bridge->mstid_table, sizeof(mstp_bridge->mstid_table),
-			mstp_bridge->mstConfigId.config_digest, &md_len);
-	if (md5_ptr == NULL) 
-	{ 
-		STP_LOG_ERR("MD5 calculation Error in HMAC"); 
-		return;   
-	} 
-	if (md_len != MD5_DIGEST_LENGTH) 
-		STP_LOG_ERR("MD5 digest len : %d != 16",md_len); 
-	else 
-		STP_LOG_DEBUG("MD5 : 0x%s", md5_ptr); 	
-
-    if (print)
-	{
-		mstpdebug_print_config_digest(mstp_bridge->mstConfigId.config_digest);
-	}
-}
-
 /*****************************************************************************/
 /* mstputil_get_common_bridge: returns the common bridge structure for the   */
 /* input mstp index                                                          */
@@ -230,7 +176,7 @@ MSTP_MSTI_PORT * mstputil_get_msti_port(MSTP_MSTID mstid, PORT_ID port_number)
 	return MSTP_GET_MSTI_PORT(mstp_port, mstp_index);
 }
 
-*****************************************************************************/
+/*****************************************************************************/
 /* mstputil_get_default_name: returns the default name for the mst           */
 /* configuration id. assumes that input name is at least MSTP_NAME_LENGTH    */
 /* bytes in length                                                           */
