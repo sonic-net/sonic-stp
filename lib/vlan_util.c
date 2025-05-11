@@ -37,3 +37,56 @@ VLAN_ID vlanmask_get_next_vlan(void *bmp,VLAN_ID vlan)
 
     return i;
 }
+
+int vlanmask_to_string(BITMAP_T *mask, uint8_t *str, uint32_t maxlen)
+{
+    uint32_t i;
+    uint32_t len;
+    VLAN_ID start_vlan, end_vlan;
+
+    if (str == NULL)
+        return false;
+
+    *str = '\0';
+    len = 0;
+    start_vlan = end_vlan = VLAN_ID_INVALID;
+
+    for (i = MIN_VLAN_ID; i <= MAX_VLAN_ID; i++)
+    {
+        if (VLANMASK_ISSET(mask, i))
+        {
+            if (start_vlan == VLAN_ID_INVALID)
+            {
+                start_vlan = i;
+            }
+            end_vlan = i;
+            continue;
+        }
+
+        if (start_vlan != VLAN_ID_INVALID)
+        {
+            if (len >= maxlen)
+                return false;
+
+            if (start_vlan == end_vlan)
+                len += snprintf((char *)str+len, maxlen-len, "%d ", start_vlan);
+            else
+                len += snprintf((char *)str+len, maxlen-len, "%d to %d ", start_vlan, end_vlan);
+
+            start_vlan = end_vlan = VLAN_ID_INVALID;
+        }
+    }
+
+    if (start_vlan != VLAN_ID_INVALID)
+    {
+        if (len >= maxlen)
+            return false;
+
+        if (start_vlan == end_vlan)
+            len += snprintf((char *)str+len, maxlen-len, "%d ", start_vlan);
+        else
+            len += snprintf((char *)str+len, maxlen-len, "%d to %d ", start_vlan, end_vlan);
+    }
+
+    return len;
+}

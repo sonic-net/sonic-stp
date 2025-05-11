@@ -608,6 +608,102 @@ bool mstpmgr_disable_msti_port(MSTP_INDEX mstp_index, PORT_ID port_number, bool 
             !mstp_port->rcvdInternal, "RSTP");
     return true;
 }
+/*****************************************************************************/
+/* mstpmgr_refresh: trigger bridge role selection state machine              */
+/* in order to propagate any configuration or topology changes.              */
+/*****************************************************************************/
+bool mstpmgr_refresh(MSTP_INDEX mstp_index, bool trigger_bpdu)
+{
+    MSTP_COMMON_BRIDGE *cbridge;
+    MSTP_BRIDGE *mstp_bridge;
+    MSTP_PORT *mstp_port;
+    PORT_ID port_number;
+
+    cbridge = mstputil_get_common_bridge(mstp_index);
+    if (cbridge == NULL)
+        return false;
+
+    if (cbridge->active)
+    {
+        mstp_setReselectTree(mstp_index);
+        mstp_prs_gate(mstp_index);
+    }
+
+    if (!trigger_bpdu)
+    {
+        return true; 
+    }
+
+    /*
+     * call port transmit state machine in case new info needs to be sent
+     * in order to ensure that transmission of bpdus does not happen multiple
+     * times, call the ptx gate only when trigger events happen (bpdu is
+     * received, configuration events, and timer)
+     */
+    mstp_bridge = mstpdata_get_bridge();
+    port_number = port_mask_get_first_port(mstp_bridge->enable_mask);
+    while (port_number != BAD_PORT_ID)
+    {
+        mstp_port = mstpdata_get_port(port_number);
+        if (mstp_port)
+        {
+            if (mstp_port->newInfoCist || mstp_port->newInfoMsti)
+            {
+                mstp_ptx_gate(port_number);
+            }
+        }
+        port_number = port_mask_get_next_port(mstp_bridge->enable_mask, port_number);
+    }
+
+    return true;
+}
+
+/*****************************************************************************/
+/* mstpmgr_refresh_all: trigger bridge role selection state machine for all  */
+/* instances to trigger configuration change update.                         */
+/*****************************************************************************/
+bool mstpmgr_refresh_all()
+{
+    MSTP_BRIDGE *mstp_bridge;
+    MSTP_INDEX mstp_index;
+    MSTP_PORT *mstp_port;
+    PORT_ID port_number;
+
+    mstp_setReselectTree(MSTP_INDEX_CIST);
+    if (mstplib_get_num_active_instances())
+    {
+        for (mstp_index = MSTP_INDEX_MIN; mstp_index <= MSTP_INDEX_MAX; mstp_index++)
+        {
+            mstp_setReselectTree(mstp_index);
+        }
+    }
+
+    // trigger all port role selection state machines
+    mstp_prs_gate(MSTP_INDEX_CIST);
+
+    /*
+     * call port transmit state machine in case new info needs to be sent
+     * in order to ensure that transmission of bpdus does not happen multiple
+     * times, call the ptx gate only when trigger events happen (bpdu is
+     * received, configuration events, and timer)
+     */
+    mstp_bridge = mstpdata_get_bridge();
+
+    port_number = port_mask_get_first_port(mstp_bridge->enable_mask);
+    while (port_number != BAD_PORT_ID)
+    {
+        mstp_port = mstpdata_get_port(port_number);
+        if (mstp_port &&
+                (mstp_port->newInfoCist || mstp_port->newInfoMsti))
+        {
+            mstp_ptx_gate(port_number);
+        }
+
+        port_number = port_mask_get_next_port(mstp_bridge->enable_mask, port_number);
+    }
+
+    return true;
+}
 
 /*****************************************************************************/
 /* mstpmgr_enable_port: enables input port, called when port comes up        */

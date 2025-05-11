@@ -1402,6 +1402,38 @@ int mask_to_string(BITMAP_T *bmp, uint8_t *str, uint32_t maxlen)
     return len;
 }
 
+int mask_to_string2(BITMAP_T *bmp, uint8_t *str, uint32_t maxlen)
+{
+    if (!bmp || !bmp->arr || (maxlen < 5) || !str)
+    {
+        STP_LOG_ERR("Invalid inputs");
+        return -1;
+    }
+
+    *str = '\0';
+
+    if(is_mask_clear(bmp))
+    {
+        STP_LOG_DEBUG("BMP is Clear");
+        return -1;
+    }
+
+    int32_t bmp_id = BMP_INVALID_ID;
+    uint32_t len = 0;
+    do {
+        if (len >= maxlen)
+        {
+            return -1;
+        }
+
+        bmp_id = bmp_get_next_set_bit(bmp, bmp_id);
+        if (bmp_id != -1)
+            len += snprintf((char *)str+len, maxlen-len, "%d,", bmp_id);
+    }while(bmp_id != -1);
+
+    return len;
+}
+
 void sys_assert(int status)
 {
     assert(status);
