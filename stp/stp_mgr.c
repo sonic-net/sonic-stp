@@ -29,6 +29,10 @@ char msgtype_str[][64] = {
     "STP_PORT_CONFIG",
     "STP_VLAN_MEM_CONFIG",
     "STP_STPCTL_MSG",
+    "STP_MST_GLOBAL_CONFIG",
+    "STP_MST_INST_CONFIG",
+    "STP_MST_VLAN_PORT_LIST_CONFIG",
+    "STP_MST_INST_PORT_CONFIG",
     "STP_MAX_MSG"
 };
 
@@ -280,6 +284,7 @@ void stpmgr_disable_port(STP_CLASS *stp_class, PORT_ID port_number)
 	stp_port_class->config_pending = false;
 	stp_port_class->change_detection_enabled = true;
 	stp_port_class->self_loop = false;
+    stp_port_class->bpdu_guard_active = false;
 
 	stptimer_stop(&stp_port_class->message_age_timer);
 	stptimer_stop(&stp_port_class->forward_delay_timer);
@@ -1055,6 +1060,33 @@ void stpmgr_config_fastuplink(PORT_ID port_number, bool enable)
     }
 }
 
+bool stpmgr_is_bpdu_rcvd_on_bpdu_guard_enabled_port(VLAN_ID vlan_id, PORT_ID port_id)
+{
+	STP_CLASS *stp_class;
+	STP_PORT_CLASS *stp_port;
+    STP_INDEX		stp_index = STP_INDEX_INVALID;
+
+    if (!STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
+        return false;
+
+    stputil_get_index_from_vlan(vlan_id, &stp_index);
+    if (stp_index == STP_INDEX_INVALID)
+        return false;
+
+    stp_class = GET_STP_CLASS(stp_index);
+    stp_port = GET_STP_PORT_CLASS(stp_class, port_id);
+
+    if (stp_port == NULL)
+        return false;
+
+    if(!stp_port->bpdu_guard_active)
+    {
+        stp_port->bpdu_guard_active = true;
+        return true;
+    }
+    return false;
+}
+
 /* FUNCTION
  *		stpmgr_protect_process()
  *
@@ -1066,7 +1098,6 @@ void stpmgr_config_fastuplink(PORT_ID port_number, bool enable)
  */
 bool stpmgr_protect_process(PORT_ID rx_port, uint16_t vlan_id)
 {
-
 	if (!STP_IS_PROTECT_CONFIGURED(rx_port) && !STP_IS_PROTECT_DO_DISABLE_CONFIGURED(rx_port))
 		return (false);
 
@@ -1080,12 +1111,29 @@ bool stpmgr_protect_process(PORT_ID rx_port, uint16_t vlan_id)
         set_mask_bit(stp_global.protect_disabled_mask, rx_port);
 
 		// log message
-        STP_SYSLOG("STP: BPDU(%u) received, interface %s disabled due to BPDU guard trigger", vlan_id, stp_intf_get_port_name(rx_port));
-
+        if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+        {
+            STP_SYSLOG("STP: BPDU received, interface %s disabled due to BPDU guard trigger", stp_intf_get_port_name(rx_port));
+        }
+        else
+        {
+            STP_SYSLOG("STP: BPDU(%u) received, interface %s disabled due to BPDU guard trigger", vlan_id, stp_intf_get_port_name(rx_port));
+        }
 		// Disable rx_port
         stpsync_update_bpdu_guard_shutdown(stp_intf_get_port_name(rx_port), true);
 	    stpsync_update_port_admin_state(stp_intf_get_port_name(rx_port), false, STP_IS_ETH_PORT_ID(rx_port));
 	}
+    else
+    {
+        if(stpmgr_is_bpdu_rcvd_on_bpdu_guard_enabled_port(vlan_id, rx_port) ||
+                mstpmgr_is_bpdu_rcvd_on_bpdu_guard_enabled_port(rx_port))
+        {
+            if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+                STP_SYSLOG("STP: Warning - BPDU received on BPDU guard enabled interface %s", stp_intf_get_port_name(rx_port));
+            else
+                STP_SYSLOG("STP: Warning - BPDU(VLAN %u) received on BPDU guard enabled interface %s", vlan_id, stp_intf_get_port_name(rx_port));
+        }
+    }
 
 	return (true);
 }
@@ -1122,6 +1170,28 @@ static bool stpmgr_config_fastspan(PORT_ID port_id, bool enable)
 	return ret;
 }
 
+void stpmgr_reset_bpdu_guard_active(PORT_ID port_id)
+{
+	STP_INDEX index;
+	STP_CLASS *stp_class;
+	STP_PORT_CLASS *stp_port;
+
+	for (index = 0; index < g_stp_instances; index++)
+	{
+		stp_class = GET_STP_CLASS(index);
+		if ((stp_class->state == STP_CLASS_FREE) ||
+			(!is_member(stp_class->control_mask, port_id)))
+		{
+			continue;
+		}
+
+		stp_port = GET_STP_PORT_CLASS(stp_class, port_id);
+
+        if(stp_port && stp_port->bpdu_guard_active)
+	        stp_port->bpdu_guard_active = false;
+    }
+}
+
 /* FUNCTION
  *		stpmgr_config_protect()
  *
@@ -1155,6 +1225,11 @@ bool stpmgr_config_protect(PORT_ID port_id, bool enable, bool do_disable)
         }
 
         clear_mask_bit(stp_global.protect_mask, port_id);
+
+        if (STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
+            stpmgr_reset_bpdu_guard_active(port_id);
+        else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+            mstpmgr_reset_bpdu_guard_active(port_id);
 	}
 
 	return ret;
@@ -1806,50 +1881,95 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
     switch(msg->msg_type)
     {
         case STP_INIT_READY:
-            {
-                STP_INIT_READY_MSG *pmsg = (STP_INIT_READY_MSG *)msg->data;
-                /* All ports are initialized in the system. Now build IF DB in STP */
-                ret = stp_intf_event_mgr_init();
-                if(ret == -1)
-                    return;
+        {
+            STP_INIT_READY_MSG *pmsg = (STP_INIT_READY_MSG *)msg->data;
+            /* All ports are initialized in the system. Now build IF DB in STP */
+            ret = stp_intf_event_mgr_init();
+            if(ret == -1)
+                return;
 
-                /* Do other protocol related inits */
-                stpmgr_init(pmsg->max_stp_instances);
-                break;
+            /* Do other protocol related inits */
+            stpmgr_init(pmsg->max_stp_instances);
+            if (!mstpmgr_init())
+            {
+                STP_LOG_ERR("MSTP global structures initialization failed\n");
+                return;
             }
+            break;
+        }
         case STP_BRIDGE_CONFIG:
+        {
+            if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_bridge_config_msg(msg->data);
-                break;
             }
+            else if(msg->proto_mode == L2_MSTP)
+            {
+                mstpmgr_process_bridge_config_msg(msg->data);
+            }
+            break;
+        }
         case STP_VLAN_CONFIG:
-            {
-                stpmgr_process_vlan_config_msg(msg->data);
-                break;
-            }
+        {
+            stpmgr_process_vlan_config_msg(msg->data);
+            break;
+        }
         case STP_VLAN_PORT_CONFIG:
-            {
-                stpmgr_process_vlan_intf_config_msg(msg->data);
-                break;
-            }
+        {
+            stpmgr_process_vlan_intf_config_msg(msg->data);
+            break;
+        }
         case STP_PORT_CONFIG:
+        {
+            if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_intf_config_msg(msg->data);
-                break;
             }
+            else if(msg->proto_mode == L2_MSTP)
+            {
+                mstpmgr_process_intf_config_msg(msg->data);
+            }
+            break;
+        }
         case STP_VLAN_MEM_CONFIG:
-            {
-                stpmgr_process_vlan_mem_config_msg(msg->data);
-                break;
-            }
-
+        {
+            stpmgr_process_vlan_mem_config_msg(msg->data);
+            break;
+        }
         case STP_STPCTL_MSG:
+        {
+            STP_LOG_INFO("Server received from %s", client_addr.sun_path);
+            if (STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
             {
-                STP_LOG_INFO("Server received from %s", client_addr.sun_path);
                 stpdbg_process_ctl_msg(msg->data);
-                stpmgr_send_reply(client_addr, (void *)msg, len);
-                break;
             }
+            else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+            {
+                mstpdbg_process_ctl_msg(msg->data);
+            }
+            stpmgr_send_reply(client_addr, (void *)msg, len);
+            break;
+        }
+        case STP_MST_GLOBAL_CONFIG:
+        {
+            mstpmgr_process_mstp_global_config_msg(msg->data);
+            break;
+        }
+        case STP_MST_INST_CONFIG:
+        {
+            mstpmgr_process_inst_vlan_config_msg(msg->data);
+            break;
+        }
+        case STP_MST_VLAN_PORT_LIST_CONFIG:
+        {
+            mstpmgr_process_vlan_mem_config_msg(msg->data);
+            break;
+        }
+        case STP_MST_INST_PORT_CONFIG:
+        {
+            mstpmgr_process_inst_port_config_msg(msg->data);
+            break;
+        }
 
         default:
             break;
