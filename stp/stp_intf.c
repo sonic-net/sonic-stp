@@ -381,11 +381,11 @@ void stp_intf_del_po_member(uint32_t po_kif_index, uint32_t member_port)
             for (stp_index = 0; stp_index < g_stp_instances; stp_index++)
                 stpmgr_delete_control_port(stp_index, node->port_id, true);
         }
-       /* else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+        else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
         {
             mstpdata_update_vlanport_db_on_po_delete(node->port_id);
             mstpmgr_delete_control_port(node->port_id, true);
-        }*/
+        }
 
         stp_intf_release_po_id(node->port_id);
         stp_intf_del_from_intf_db(node);
@@ -521,8 +521,8 @@ void stp_intf_netlink_cb(netlink_db_t *if_db, uint8_t is_add, bool init_in_prog)
             {
                 if (STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
                     stpmgr_port_event(node->port_id, if_db->oper_state);
-                /*else if(STP_IS_PROTOCOL_ENABLED(L2_MSTP))
-                    mstpmgr_port_event(node->port_id, if_db->oper_state);*/
+                else if(STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+                    mstpmgr_port_event(node->port_id, if_db->oper_state);
             }
         }
     }
