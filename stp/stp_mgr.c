@@ -309,6 +309,9 @@ void stpmgr_disable_port(STP_CLASS *stp_class, PORT_ID port_number)
 		stptimer_stop(&stp_class->tcn_timer);
 		config_bpdu_generation(stp_class);
 		stptimer_start(&stp_class->hello_timer, 0);
+
+		stplog_topo_change(stp_class, port_number, STP_DISABLE_PORT);
+		stplog_new_root(stp_class, STP_DISABLE_PORT);
 	}
 }
 
@@ -351,6 +354,15 @@ void stpmgr_set_bridge_priority(STP_CLASS *stp_class, BRIDGE_IDENTIFIER *bridge_
 			stptimer_stop(&stp_class->tcn_timer);
 			config_bpdu_generation(stp_class);
 			stptimer_start(&stp_class->hello_timer, 0);
+
+			stplog_new_root(stp_class, STP_CHANGE_PRIORITY);
+		}
+	}
+	else
+	{
+		if (root)
+		{
+			stplog_root_change(stp_class, STP_CHANGE_PRIORITY);
 		}
 	}
 }
