@@ -30,19 +30,13 @@ using namespace swss;
 
 extern char mstp_role_string[][20];
 
-// TODO - Remove this after addin to schema 
-#define APP_STP_INST_PORT_FLUSH_TABLE_NAME  "STP_INST_PORT_FLUSH_TABLE"
-#define APP_STP_MST_TABLE_NAME              "STP_MST_INST_TABLE"
-#define APP_STP_MST_PORT_TABLE_NAME         "STP_MST_PORT_TABLE"
-#define APP_STP_MST_NAME_TABLE_NAME         "STP_MST_NAME_TABLE"
-
 StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
     m_stpVlanTable(db, APP_STP_VLAN_TABLE_NAME),
     m_stpVlanPortTable(db, APP_STP_VLAN_PORT_TABLE_NAME),
     m_stpVlanInstanceTable(db, APP_STP_VLAN_INSTANCE_TABLE_NAME),
     m_stpPortTable(db, APP_STP_PORT_TABLE_NAME),
     m_stpPortStateTable(db, APP_STP_PORT_STATE_TABLE_NAME),
-    m_stpMstTable(db, APP_STP_MST_TABLE_NAME),
+    m_stpMstTable(db, APP_STP_MST_INST_TABLE_NAME),
     m_stpMstPortTable(db, APP_STP_MST_PORT_TABLE_NAME),
     m_stpFastAgeFlushTable(db, APP_STP_FASTAGEING_FLUSH_TABLE_NAME),
     m_stpInstancePortFlushTable(db, APP_STP_INST_PORT_FLUSH_TABLE_NAME),
