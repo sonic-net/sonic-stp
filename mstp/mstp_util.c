@@ -667,6 +667,7 @@ void mstputil_network_order_bpdu(MSTP_BPDU *bpdu)
 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     UINT16 i;
+    UINT16 num_msti_messages;
 
     bpdu->protocol_id = htons(bpdu->protocol_id);
     if (bpdu->type == TCN_BPDU_TYPE)
@@ -688,7 +689,14 @@ void mstputil_network_order_bpdu(MSTP_BPDU *bpdu)
             bpdu->protocol_version_id == STP_VERSION_ID)
         return;
 
-    for (i = 0; i < MSTP_GET_NUM_MSTI_CONFIG_MESSAGES(bpdu->v3_length); i++)
+    num_msti_messages = MSTP_GET_NUM_MSTI_CONFIG_MESSAGES(bpdu->v3_length);
+
+    // Validate the number of MSTI messages to prevent buffer overflow
+    if (num_msti_messages > MSTP_MAX_INSTANCES_PER_REGION) {
+        num_msti_messages = MSTP_MAX_INSTANCES_PER_REGION;
+    }
+
+    for (i = 0; i < num_msti_messages; i++)
     {
         HOST_TO_NET_MAC(&bpdu->msti_msgs[i].msti_regional_root.address,
             &bpdu->msti_msgs[i].msti_regional_root.address);
@@ -713,6 +721,7 @@ void mstputil_host_order_bpdu(MSTP_BPDU *bpdu)
 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     UINT16 i;
+    UINT16 num_msti_messages;
 
     bpdu->protocol_id = ntohs(bpdu->protocol_id);
     if (bpdu->type == TCN_BPDU_TYPE)
@@ -734,7 +743,14 @@ void mstputil_host_order_bpdu(MSTP_BPDU *bpdu)
         return;
 
     bpdu->v3_length = ntohs(bpdu->v3_length);
-    for (i = 0; i < MSTP_GET_NUM_MSTI_CONFIG_MESSAGES(bpdu->v3_length); i++)
+    num_msti_messages = MSTP_GET_NUM_MSTI_CONFIG_MESSAGES(bpdu->v3_length);
+
+    // Validate the number of MSTI messages to prevent buffer overflow
+    if (num_msti_messages > MSTP_MAX_INSTANCES_PER_REGION) {
+        num_msti_messages = MSTP_MAX_INSTANCES_PER_REGION;
+    }
+
+    for (i = 0; i < num_msti_messages; i++)
     {
         NET_TO_HOST_MAC(&bpdu->msti_msgs[i].msti_regional_root.address,
             &bpdu->msti_msgs[i].msti_regional_root.address);
@@ -861,6 +877,15 @@ bool mstputil_validate_bpdu(MSTP_BPDU *bpdu, UINT16 size)
 				}
 
 				return true;
+			}
+
+			// Additional validation: check if v3_length would cause buffer overflow
+			// when calculating the number of MSTI configuration messages
+			UINT16 num_msti_messages = MSTP_GET_NUM_MSTI_CONFIG_MESSAGES(bpdu->v3_length);
+			if (num_msti_messages > MSTP_MAX_INSTANCES_PER_REGION) {
+				STP_LOG_ERR("mstp bpdu v3_length %u would cause %u MSTI messages, exceeding limit of %u",
+					bpdu->v3_length, num_msti_messages, MSTP_MAX_INSTANCES_PER_REGION);
+				return false;
 			}
 
 			// mstp bpdu
@@ -1406,6 +1431,11 @@ static UINT16 mstputil_get_bpdu_size(MSTP_BPDU *bpdu)
 		v3_length = bpdu->v3_length;
 		msti_config_msgsize = sizeof(MSTI_CONFIG_MESSAGE);
 		num_instances = MSTP_GET_NUM_MSTI_CONFIG_MESSAGES(v3_length);
+
+                // Validate the number of MSTI messages to prevent potential underflow
+		if (num_instances > max_instances) {
+			num_instances = max_instances;
+		}
 
 		bpdu_size -= ((max_instances-num_instances) * msti_config_msgsize);
 	}
