@@ -1432,7 +1432,7 @@ static UINT16 mstputil_get_bpdu_size(MSTP_BPDU *bpdu)
 		msti_config_msgsize = sizeof(MSTI_CONFIG_MESSAGE);
 		num_instances = MSTP_GET_NUM_MSTI_CONFIG_MESSAGES(v3_length);
 
-                // Validate the number of MSTI messages to prevent potential underflow
+        // Validate the number of MSTI messages to prevent potential underflow
 		if (num_instances > max_instances) {
 			num_instances = max_instances;
 		}
