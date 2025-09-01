@@ -98,6 +98,9 @@ UINT32 stputil_get_path_cost(STP_PORT_SPEED port_speed, bool extend)
 		case STP_SPEED_400G:
 			return ((extend) ? STP_PORT_PATH_COST_400G: STP_LEGACY_PORT_PATH_COST_400G);
 
+		case STP_SPEED_800G:
+			return ((extend) ? STP_PORT_PATH_COST_800G: STP_LEGACY_PORT_PATH_COST_800G);
+
         default:
             break;
 	}
