@@ -10,10 +10,10 @@ parameters:
 - name: pool
   type: string
   values:
-  - sonicbld
+  - sonicso1ES-amd64
   - default
-  - sonicbld-armhf
-  - sonicbld-arm64
+  - sonicso1ES-armhf
+  - sonicso1ES-arm64
   default: default
 
 - name: timeout
@@ -38,7 +38,7 @@ jobs:
     ${{ if ne(parameters.pool, 'default') }}:
       name: ${{ parameters.pool }}
     ${{ if eq(parameters.pool, 'default') }}:
-      vmImage: 'ubuntu-20.04'
+      vmImage: 'ubuntu-latest'
 
   container:
     image: sonicdev-microsoft.azurecr.io:443/${{ parameters.sonic_slave }}:latest
