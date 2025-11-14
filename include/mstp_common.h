@@ -45,7 +45,7 @@ typedef struct
 	// mac-address for the bridge
 	MAC_ADDRESS             address;
 
-}__attribute__((aligned(4))) MSTP_BRIDGE_IDENTIFIER;
+}__attribute__((__packed__)) MSTP_BRIDGE_IDENTIFIER;
 
 /*****************************************************************************/
 /* msti configuration message structure                                      */
@@ -69,7 +69,7 @@ typedef struct
 	UINT8                   agreement:1;
 	UINT8                   master:1;
 #endif
-} __attribute__((aligned(4)))MSTI_FLAGS;
+} __attribute__((__packed__))MSTI_FLAGS;
 
 /*****************************************************************************/
 /*  msti configuration message structure                                     */
@@ -106,7 +106,7 @@ typedef struct
 	// mst instance remaining hops
 	UINT8                   msti_remaining_hops;
 
-} __attribute__((aligned(4))) MSTI_CONFIG_MESSAGE;
+} __attribute__((__packed__)) MSTI_CONFIG_MESSAGE;
 
 /*****************************************************************************/
 /*  mst configuration identification                                         */
@@ -131,7 +131,7 @@ typedef struct
 	// the mst configuration table.
 	UINT8                   config_digest[16];
 
-} __attribute__((aligned(4))) MSTP_CONFIG_IDENTIFIER;
+} __attribute__((__packed__)) MSTP_CONFIG_IDENTIFIER;
 
 typedef struct RSTP_BPDU_FLAGS
 {
@@ -152,7 +152,7 @@ typedef struct RSTP_BPDU_FLAGS
         UINT8                   agreement:1;
         UINT8                   topology_change_acknowledgement:1;
 #endif
-} __attribute__((aligned(4))) RSTP_BPDU_FLAGS;
+} __attribute__((__packed__)) RSTP_BPDU_FLAGS;
 
 
 /*****************************************************************************/
@@ -223,7 +223,7 @@ typedef struct
 	// a sequence of zero or more msti configuration messages
 	MSTI_CONFIG_MESSAGE     msti_msgs[MSTP_MAX_INSTANCES_PER_REGION];
 
-} __attribute__((aligned(4))) MSTP_BPDU;
+} __attribute__((__packed__)) MSTP_BPDU;
 
 // rstp bpdu
 typedef struct RSTP_BPDU
@@ -243,6 +243,6 @@ typedef struct RSTP_BPDU
         UINT16                  hello_time;
         UINT16                  forward_delay;
         UINT8                   version1_length;
-} __attribute__((aligned(4))) RSTP_BPDU;
+} __attribute__((__packed__)) RSTP_BPDU;
 
 #endif // //__MSTP_COMMON_H__

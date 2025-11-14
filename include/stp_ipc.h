@@ -62,6 +62,12 @@ typedef enum STP_CTL_TYPE
     STP_CTL_MAX
 } STP_CTL_TYPE;
 
+typedef enum LinkType {
+    AUTO =              0,      // Auto
+    POINT_TO_POINT =    1,      // Point-to-point
+    SHARED =            2       // Shared
+} LinkType;
+
 typedef struct STP_IPC_MSG
 {
     int msg_type;
@@ -137,8 +143,8 @@ typedef struct STP_PORT_CONFIG_MSG
     uint8_t bpdu_guard_do_disable;
     uint8_t portfast;
     uint8_t uplink_fast;
-    int edge;
-    uint16_t padding;
+    uint8_t edge;
+    LinkType    link_type;          // MSTP only
     int path_cost;
     int priority;
     int count;
