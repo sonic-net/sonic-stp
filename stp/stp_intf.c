@@ -594,12 +594,20 @@ int stp_intf_event_mgr_init(void)
         STP_LOG_CRITICAL("netlink init failed");
         sys_assert(0);
     }
-
-    if (stp_netlink_recv_all(g_stpd_netlink_handle) == -1)
+    do
     {
-        STP_LOG_CRITICAL("error in intf db creation");
-        sys_assert(0);
+        if (stp_netlink_recv_all(g_stpd_netlink_handle) == -1)
+        {
+            STP_LOG_CRITICAL("error in intf db creation");
+            sys_assert(0);
+        }
+        if(!g_max_stp_port)
+        {
+            STP_LOG_INFO("Max port is 0,retry after 1 sec");
+            sleep(1);
+        }
     }
+    while(g_max_stp_port == 0 );
 
     g_max_stp_port = g_max_stp_port * 2; // Phy Ports + LAG
     STP_LOG_INFO("intf db done. max port %d", g_max_stp_port);

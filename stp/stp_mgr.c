@@ -1899,15 +1899,14 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
         }
         case STP_BRIDGE_CONFIG:
         {
-            stpmgr_process_bridge_config_msg(msg->data);
-            /*if(msg->proto_mode == L2_PVSTP)
+            if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_bridge_config_msg(msg->data);
             }
             else if(msg->proto_mode == L2_MSTP)
             {
                 mstpmgr_process_bridge_config_msg(msg->data);
-            }*/
+            }
             break;
         }
         case STP_VLAN_CONFIG:
@@ -1922,15 +1921,14 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
         }
         case STP_PORT_CONFIG:
         {
-            stpmgr_process_intf_config_msg(msg->data);
-            /*if(msg->proto_mode == L2_PVSTP)
+            if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_intf_config_msg(msg->data);
             }
             else if(msg->proto_mode == L2_MSTP)
             {
                 mstpmgr_process_intf_config_msg(msg->data);
-            }*/
+            }
             break;
         }
         case STP_VLAN_MEM_CONFIG:
@@ -1964,7 +1962,8 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
         }
         case STP_MST_VLAN_PORT_LIST_CONFIG:
         {
-            mstpmgr_process_vlan_mem_config_msg(msg->data);
+            if (msg->proto_mode == L2_MSTP)
+                mstpmgr_process_vlan_mem_config_msg(msg->data);
             break;
         }
         case STP_MST_INST_PORT_CONFIG:
