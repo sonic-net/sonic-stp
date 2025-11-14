@@ -1911,12 +1911,18 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
         }
         case STP_VLAN_CONFIG:
         {
-            stpmgr_process_vlan_config_msg(msg->data);
+            if(msg->proto_mode == L2_PVSTP)
+            {
+                stpmgr_process_vlan_config_msg(msg->data);
+            }
             break;
         }
         case STP_VLAN_PORT_CONFIG:
         {
-            stpmgr_process_vlan_intf_config_msg(msg->data);
+            if(msg->proto_mode == L2_PVSTP)
+            {
+                stpmgr_process_vlan_intf_config_msg(msg->data);
+            }
             break;
         }
         case STP_PORT_CONFIG:
@@ -1933,7 +1939,10 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
         }
         case STP_VLAN_MEM_CONFIG:
         {
-            stpmgr_process_vlan_mem_config_msg(msg->data);
+            if(msg->proto_mode == L2_PVSTP)
+            {
+                stpmgr_process_vlan_mem_config_msg(msg->data);
+            }
             break;
         }
         case STP_STPCTL_MSG:
