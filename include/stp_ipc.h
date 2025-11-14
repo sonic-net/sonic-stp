@@ -83,7 +83,7 @@ typedef struct STP_INIT_READY_MSG
 {
     uint8_t opcode; // enable/disable
     uint16_t max_stp_instances;
-} __attribute__((aligned(4))) STP_INIT_READY_MSG;
+} __attribute__((packed)) STP_INIT_READY_MSG;
 
 typedef struct STP_BRIDGE_CONFIG_MSG
 {
@@ -91,15 +91,14 @@ typedef struct STP_BRIDGE_CONFIG_MSG
     uint8_t stp_mode;
     int rootguard_timeout;
     uint8_t base_mac_addr[6];
-} __attribute__((aligned(4))) STP_BRIDGE_CONFIG_MSG;
+} __attribute__((packed)) STP_BRIDGE_CONFIG_MSG;
 
 typedef struct PORT_ATTR
 {
     char intf_name[IFNAMSIZ];
     int8_t mode;
     uint8_t enabled;
-    uint16_t padding;
-} __attribute__((aligned(4))) PORT_ATTR;
+} PORT_ATTR;
 
 typedef struct STP_VLAN_CONFIG_MSG
 {
@@ -113,7 +112,7 @@ typedef struct STP_VLAN_CONFIG_MSG
     int priority;
     int count;
     PORT_ATTR port_list[0];
-} __attribute__((aligned(4))) STP_VLAN_CONFIG_MSG;
+} __attribute__((packed)) STP_VLAN_CONFIG_MSG;
 
 typedef struct STP_VLAN_PORT_CONFIG_MSG
 {
@@ -123,15 +122,14 @@ typedef struct STP_VLAN_PORT_CONFIG_MSG
     int inst_id;
     int path_cost;
     int priority;
-} __attribute__((aligned(4))) STP_VLAN_PORT_CONFIG_MSG;
+} __attribute__((packed)) STP_VLAN_PORT_CONFIG_MSG;
 
 typedef struct VLAN_ATTR
 {
     int inst_id;
     int vlan_id;
     int8_t mode;
-    uint8_t padding[3];
-} __attribute__((aligned(4))) VLAN_ATTR;
+} __attribute__((packed)) VLAN_ATTR;
 
 typedef struct STP_PORT_CONFIG_MSG
 {
@@ -149,7 +147,7 @@ typedef struct STP_PORT_CONFIG_MSG
     int priority;
     int count;
     VLAN_ATTR vlan_list[0];
-} __attribute__((aligned(4))) STP_PORT_CONFIG_MSG;
+} STP_PORT_CONFIG_MSG;
 
 typedef struct STP_VLAN_MEM_CONFIG_MSG
 {
@@ -162,22 +160,22 @@ typedef struct STP_VLAN_MEM_CONFIG_MSG
     uint8_t padding;
     int path_cost;
     int priority;
-} __attribute__((aligned(4))) STP_VLAN_MEM_CONFIG_MSG;
+} __attribute__((packed)) STP_VLAN_MEM_CONFIG_MSG;
 
 typedef struct STP_MST_GLOBAL_CONFIG_MSG {
     uint8_t     opcode; // enable/disable
-    uint16_t    revision_number;
+    uint32_t    revision_number;
     char        name[STP_SYNC_MSTP_NAME_LEN];
-    int         forward_delay;
-    int         hello_time;
-    int         max_age;
-    int         max_hop;
-}__attribute__((aligned(4))) STP_MST_GLOBAL_CONFIG_MSG;
+    uint8_t     forward_delay;
+    uint8_t     hello_time;
+    uint8_t     max_age;
+    uint8_t     max_hop;
+}__attribute__((packed)) STP_MST_GLOBAL_CONFIG_MSG;
 
 
 typedef struct VLAN_LIST{
     uint16_t    vlan_id;
-} __attribute__((aligned(2)))VLAN_LIST;
+}VLAN_LIST;
 
 typedef struct MST_INST_CONFIG_MSG
 {
@@ -186,12 +184,12 @@ typedef struct MST_INST_CONFIG_MSG
     int         priority;
     uint16_t    vlan_count;
     VLAN_LIST   vlan_list[0];
-} __attribute__((aligned(4))) MST_INST_CONFIG_MSG;
+} __attribute__((packed))  MST_INST_CONFIG_MSG;
 
 typedef struct STP_MST_INSTANCE_CONFIG_MSG {
     uint8_t    mst_count;
     MST_INST_CONFIG_MSG mst_list[0];
-} __attribute__((aligned(4))) STP_MST_INSTANCE_CONFIG_MSG;
+} __attribute__((packed)) STP_MST_INSTANCE_CONFIG_MSG;
 
 typedef struct STP_MST_INST_PORT_CONFIG_MSG {
     uint8_t     opcode; // enable/disable
@@ -199,7 +197,7 @@ typedef struct STP_MST_INST_PORT_CONFIG_MSG {
     uint16_t    mst_id;
     int         path_cost;
     int         priority;
-}__attribute__((aligned(4))) STP_MST_INST_PORT_CONFIG_MSG;
+}__attribute__((packed)) STP_MST_INST_PORT_CONFIG_MSG;
 
 typedef struct PORT_LIST
 {
@@ -214,7 +212,7 @@ typedef struct STP_MST_VLAN_PORT_MAP
     int8_t      stp_mode;
     uint8_t     add;    
     PORT_LIST   port_list[0];
-}__attribute__((aligned(4))) STP_MST_VLAN_PORT_MAP;
+}STP_MST_VLAN_PORT_MAP;
 
 typedef struct MSTP_INST_VLAN_LIST
 {
@@ -223,7 +221,7 @@ typedef struct MSTP_INST_VLAN_LIST
     int         priority;
     uint16_t    vlan_count;
     VLAN_LIST   vlan_list[4094];
-}__attribute__((aligned(4))) MSTP_INST_VLAN_LIST;
+}__attribute__((packed)) MSTP_INST_VLAN_LIST;
 
 typedef struct STP_DEBUG_OPT
 {
@@ -245,7 +243,7 @@ typedef struct STP_DEBUG_OPT
     uint8_t port : 1;
     uint8_t vlan : 1;
     uint8_t mst : 1;
-} __attribute__((aligned(4))) STP_DEBUG_OPT;
+} __attribute__((packed))  STP_DEBUG_OPT;
 
 typedef struct STP_CTL_MSG
 {
@@ -255,6 +253,6 @@ typedef struct STP_CTL_MSG
     int level;
     STP_DEBUG_OPT dbg;
     int mst_id;
-} __attribute__((aligned(4))) STP_CTL_MSG;
+} __attribute__((packed)) STP_CTL_MSG;
 
 #endif
