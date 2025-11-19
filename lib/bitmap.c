@@ -159,7 +159,8 @@ BMP_ID bmp_find_first_unset_bit_after_offset(BITMAP_T *bmp, uint16_t offset)
             return bmp_id;
         }
         offset_index++;
-        offset_bmp = bmp->arr[offset_index];
+        if(offset_index < bmp->size)
+            offset_bmp = bmp->arr[offset_index];
     }while(offset_index < bmp->size);
 
     return BMP_INVALID_ID;
@@ -299,45 +300,35 @@ void bmp_print_all(BITMAP_T *bmp)
         APP_LOG_INFO("");
 }
 
-int8_t bmp_init(BITMAP_T *bmp)
-{
-    if (bmp->nbits == 0)
-    {
-        APP_LOG_ERR("Invalid params : nbits-%u", bmp->nbits);
-        return -1;
-    }
-
-    bmp->size = (bmp->nbits + (BMP_MASK_BITS - 1))/BMP_MASK_BITS;
-
-    if (NULL == (bmp->arr = calloc(1, bmp->size * sizeof(unsigned int))))
-    {
-        APP_LOG_CRITICAL("calloc Failed");
-        return -1;
-    }
-
-    APP_LOG_DEBUG("created BITMAP of size %d for %u bits", bmp->size, bmp->nbits);
-
-    return 0;
-}
-
 void bmp_free(BITMAP_T *bmp)
 {
-    if (bmp->arr)
-        free(bmp->arr);
     free(bmp);
 }
 
 int8_t bmp_alloc(BITMAP_T **bmp, uint16_t nbits)
 {
-    if (NULL == (*bmp = calloc(1, sizeof(BITMAP_T))))
+    uint16_t arr_size = 0;
+
+    if (nbits == 0)
     {
-        APP_LOG_ERR("Calloc Failed");
+        APP_LOG_ERR("Invalid params : nbits-%u", nbits);
         return -1;
     }
 
-    (*bmp)->nbits = nbits;
+    arr_size = (nbits + (BMP_MASK_BITS - 1))/BMP_MASK_BITS;
 
-    return bmp_init(*bmp);
+    *bmp = calloc(1, sizeof(BITMAP_T) + (arr_size * sizeof(unsigned int)));
+    if (*bmp == NULL)
+    {
+        APP_LOG_CRITICAL("calloc Failed");
+        return -1;
+    }
+
+    (*bmp)->size = arr_size;
+    (*bmp)->nbits = nbits;
+    APP_LOG_DEBUG("created BITMAP of size %d for %u bits", (*bmp)->size, (*bmp)->nbits);
+
+    return 0;
 }
 
 unsigned int bmp_count_set_bits(BITMAP_T *bmp)

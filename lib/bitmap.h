@@ -53,7 +53,7 @@ typedef struct BITMAP_S{
     //size : min number of "unsigned int" required to accomodate all the bits
     //range : 1-2047
     uint16_t size; 
-    unsigned int *arr;
+    unsigned int arr[0];
 }BITMAP_T;
 
 typedef int32_t BMP_ID;

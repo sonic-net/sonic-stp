@@ -1731,18 +1731,6 @@ void mstp_updtRolesCist(MSTP_INDEX mstp_index)
         cist_bridge->rootTimes = cist_bridge->bridgeTimes;
     }
 
-    mstp_port = mstpdata_get_port(root_port);
-	if (!mstp_port->rcvdInternal)
-        cist_bridge->rootTimes.messageAge++;
-    else
-    {
-        if(cist_bridge->rootTimes.remainingHops)
-        {
-            cist_bridge->rootTimes.remainingHops--;
-            SET_BIT(cist_bridge->modified_fields, MSTP_BRIDGE_DATA_MEMBER_REM_HOPS_BIT);
-        }
-    }
-
     port_number = port_mask_get_first_port(mstp_bridge->enable_mask);
     while (port_number != BAD_PORT_ID)
     {

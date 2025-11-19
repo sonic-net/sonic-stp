@@ -73,7 +73,7 @@
 #define STP_SIZEOF_CONFIG_BPDU 35
 #define STP_SIZEOF_TCN_BPDU 4
 #define STP_BULK_MESG_LENGTH 350
-#define STP_MAX_PKT_LEN 68
+#define STP_MAX_PKT_LEN 1500 /* eth header + llc + MSTP(102) + MSTP(16 * 64 instance) */ 
 
 #define g_stp_instances stp_global.max_instances
 #define g_stp_active_instances stp_global.active_instances
