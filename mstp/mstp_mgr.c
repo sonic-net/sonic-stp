@@ -281,7 +281,7 @@ static void mstpmgr_free_mstp_port(PORT_ID port_number)
     {
         /* Delete CIST port from APP DB*/
         stpsync_del_mst_port_info(ifname, MSTP_MSTID_CIST);
-        stpsync_del_port_state(ifname, MSTP_INDEX_CIST);
+        stpsync_del_port_state(ifname, MSTP_MSTID_CIST);
     }
     mstpdata_free_port(port_number);
 }
@@ -983,7 +983,7 @@ void mstpmgr_delete_member_port(MSTP_INDEX mstp_index, PORT_ID port_number)
     {
         if (!IS_MEMBER(cist_bridge->co.portmask, port_number))
             return;
-        stpsync_del_port_state(ifname, mstp_index);
+        stpsync_del_port_state(ifname, mstputil_get_mstid(mstp_index));
         clear_mask_bit(cist_bridge->co.portmask, port_number);
     } 
     else 
@@ -999,7 +999,7 @@ void mstpmgr_delete_member_port(MSTP_INDEX mstp_index, PORT_ID port_number)
         {
             /* Delete MSTI port from APP DB*/
             stpsync_del_mst_port_info(ifname, mstputil_get_mstid(mstp_index));
-            stpsync_del_port_state(ifname, mstp_index);
+            stpsync_del_port_state(ifname, mstputil_get_mstid(mstp_index));
         }
         if (IS_MEMBER(cist_bridge->co.portmask, port_number))
             return;
@@ -1608,7 +1608,7 @@ bool mstpmgr_config_instance_vlanmask(MSTP_MSTID mstid, VLAN_MASK *vlanmask)
         vlanmask_set_bit(&cbridge->vlanmask, vlan_id);
         if(mstpdata_is_vlan_present(vlan_id)) 
         {
-            stpsync_add_vlan_to_instance(vlan_id, mstp_index);
+            stpsync_add_vlan_to_instance(vlan_id, mstid);
         }
         flag = true;
     }
@@ -1631,7 +1631,7 @@ bool mstpmgr_config_instance_vlanmask(MSTP_MSTID mstid, VLAN_MASK *vlanmask)
         vlanmask_clear_bit(&cbridge->vlanmask, vlan_id);
         if(mstpdata_is_vlan_present(vlan_id)) 
         {
-            stpsync_del_vlan_from_instance(vlan_id, mstp_index);
+            stpsync_del_vlan_from_instance(vlan_id, mstid);
         }
         flag = true;
     }
@@ -2363,7 +2363,7 @@ void mstpmgr_process_vlan_mem_config_msg(void *msg)
             mst_id = MSTP_GET_MSTID(mstp_bridge, pmsg->vlan_id);
             mstp_index = MSTP_GET_INSTANCE_INDEX(mstp_bridge, mst_id);
             if (mstp_index != MSTP_INDEX_INVALID)
-                stpsync_add_vlan_to_instance(pmsg->vlan_id, mstp_index);
+                stpsync_add_vlan_to_instance(pmsg->vlan_id, mst_id);
         }
     }
     
@@ -2394,7 +2394,7 @@ void mstpmgr_process_vlan_mem_config_msg(void *msg)
             {
                 mstputil_set_kernel_bridge_port_state(mstp_index, port_id, FORWARDING);
                 STP_LOG_INFO("[MST %d] Port %s FORWARDING", mst_id, port_list[port_count].intf_name);
-                stpsync_update_port_state(port_list[port_count].intf_name, mstp_index, FORWARDING);
+                stpsync_update_port_state(port_list[port_count].intf_name, mst_id, FORWARDING);
                 continue;
             }
         }
@@ -2429,7 +2429,7 @@ void mstpmgr_process_vlan_mem_config_msg(void *msg)
                 /* For CIST index h/w port state wouldnt have updated, when vlan mask is empty.
                  * So ensure to update the h/w port state*/
                 if (MSTP_IS_CIST_INDEX(mstp_index))
-                    stpsync_update_port_state(stp_intf_get_port_name(port_id), mstp_index, state);
+                    stpsync_update_port_state(stp_intf_get_port_name(port_id), mst_id, state);
             }
             port_id= port_mask_get_next_port(port_mask, port_id);
         }
@@ -2460,8 +2460,7 @@ void mstpmgr_process_vlan_mem_config_msg(void *msg)
         if(!mstpdata_is_vlan_present(pmsg->vlan_id))
         {
             mst_id = MSTP_GET_MSTID(mstp_bridge, pmsg->vlan_id);
-            mstp_index = MSTP_GET_INSTANCE_INDEX(mstp_bridge, mst_id);
-            stpsync_del_vlan_from_instance(pmsg->vlan_id, mstp_index);
+            stpsync_del_vlan_from_instance(pmsg->vlan_id, mst_id);
         }
     }
 }
@@ -2709,7 +2708,7 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
             {
                 mstputil_set_kernel_bridge_port_state(MSTP_INDEX_CIST, port_number, FORWARDING);
                 /* stp disabled ports, make to forwarding */
-                stpsync_update_port_state(stp_intf_get_port_name(port_number), MSTP_INDEX_CIST, FORWARDING);
+                stpsync_update_port_state(stp_intf_get_port_name(port_number), MSTP_MSTID_CIST, FORWARDING);
                 port_number = port_mask_get_next_port(cist_stp_disabled_ports, port_number);
             }
 
@@ -2735,7 +2734,7 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
                 {
                     mstputil_set_kernel_bridge_port_state(mstp_index, port_number, FORWARDING);
                     /* stp disabled ports, make to forwarding */
-                    stpsync_update_port_state(stp_intf_get_port_name(port_number), mstp_index, FORWARDING);
+                    stpsync_update_port_state(stp_intf_get_port_name(port_number), mst_id, FORWARDING);
                     STP_LOG_INFO("[MST %d] Port %d FORWARDING", mst_id , port_number);
                     port_number = port_mask_get_next_port(msti_stp_disabled_ports, port_number);
                 }
@@ -2792,7 +2791,7 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
                     mstputil_set_kernel_bridge_port_state(MSTP_INDEX_CIST, port_number, FORWARDING);
                     /* stp disabled ports, make to forwarding */
                     STP_LOG_INFO("[MST %d] Port %d FORWARDING", MSTP_MSTID_CIST, port_number);
-                    stpsync_update_port_state(stp_intf_get_port_name(port_number), MSTP_INDEX_CIST, FORWARDING);
+                    stpsync_update_port_state(stp_intf_get_port_name(port_number), MSTP_MSTID_CIST, FORWARDING);
                     port_number = port_mask_get_next_port(cist_stp_disabled_ports, port_number);
                 }
 
@@ -3023,7 +3022,7 @@ bool mstpmgr_delete_control_port(PORT_ID port_id, bool delete_port)
                 mstputil_set_kernel_bridge_port_state(mstp_index,port_id,FORWARDING);
             flag = mstpmgr_set_control_mask(mstp_index);
             if(!delete_port)
-                stpsync_update_port_state(stp_intf_get_port_name(port_id), mstp_index, FORWARDING);
+                stpsync_update_port_state(stp_intf_get_port_name(port_id), mstputil_get_mstid(mstp_index), FORWARDING);
         }
     }
 
@@ -3034,7 +3033,7 @@ bool mstpmgr_delete_control_port(PORT_ID port_id, bool delete_port)
             mstputil_set_kernel_bridge_port_state(MSTP_INDEX_CIST, port_id,FORWARDING);
         flag = mstpmgr_set_control_mask(MSTP_INDEX_CIST);
         if(!delete_port)
-            stpsync_update_port_state(stp_intf_get_port_name(port_id), MSTP_INDEX_CIST, FORWARDING);
+            stpsync_update_port_state(stp_intf_get_port_name(port_id), MSTP_MSTID_CIST, FORWARDING);
     }
 
     if(flag)
