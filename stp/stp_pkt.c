@@ -377,7 +377,7 @@ void stp_pkt_rx_handler (evutil_socket_t fd, short what, void *arg)
     {
         if (stpmgr_protect_process(intf_node->port_id, vlan_id))
             return;
-        if (pkt[1] == 128)
+        if ((unsigned char)pkt[1] == 128)
         {
              mstpmgr_rx_bpdu(vlan_id, intf_node->port_id, &pkt[0], packet_len);
         }

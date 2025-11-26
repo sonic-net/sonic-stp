@@ -1983,6 +1983,7 @@ void mstpmgr_port_event(PORT_ID port_number, bool up)
                 if(ifname)
                     stpsync_update_bpdu_guard_shutdown(ifname, false);
             }
+            mstpmgr_enable_port(port_number);
         }
         else
         {
