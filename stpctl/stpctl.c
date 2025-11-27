@@ -32,6 +32,8 @@ CMD_LIST g_cmd_list[] = {
     "clrstsvlan",     STP_CTL_CLEAR_VLAN,
     "clrstsintf",     STP_CTL_CLEAR_INTF,
     "clrstsvlanintf", STP_CTL_CLEAR_VLAN_INTF,
+    "mst",      STP_CTL_DUMP_MST,
+    "mstport",  STP_CTL_DUMP_MST_PORT,
 };
 
 void print_cmds()
@@ -381,6 +383,29 @@ int send_command(int argc, char **argv)
             }
 
             msg.vlan_id = atoi(argv[2]);
+            strncpy(msg.intf_name, argv[3], IFNAMSIZ);
+            break;
+        }
+
+        case STP_CTL_DUMP_MST: 
+        {
+            if (!(argc == 3))
+            {
+                stpout("invalid number of args\n");
+                return -1;
+            }
+            msg.mst_id = atoi(argv[2]);
+            break;
+        }
+
+        case STP_CTL_DUMP_MST_PORT: 
+        {
+            if (!(argc == 4))
+            {
+                stpout("invalid number of args\n");
+                return -1;
+            }
+            msg.mst_id = atoi(argv[2]);
             strncpy(msg.intf_name, argv[3], IFNAMSIZ);
             break;
         }
