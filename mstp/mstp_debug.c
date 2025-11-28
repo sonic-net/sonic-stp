@@ -492,7 +492,7 @@ void mstpdm_mstp_bridge()
 	MSTP_MSTID mstid;
 	MSTP_INDEX mstp_index;
 	MSTP_BRIDGE *mstp_bridge = mstpdata_get_bridge();
-    UINT8 buffer[100], buffer2[100], buffer3[100], buffer4[100], buffer5[100];
+    UINT8 buffer[500];
 
     MSTP_GLOBAL *mstp_global = &g_mstp_global;
     VLAN_ID vlan_id;
@@ -1043,6 +1043,7 @@ void mstpdbg_process_ctl_msg(void *msg)
 
     STP_LOG_INFO("cmd: %d", pmsg->cmd_type);
 
+    STP_DUMP_START;
     switch(pmsg->cmd_type)
     {
         case STP_CTL_DUMP_GLOBAL:
@@ -1232,6 +1233,12 @@ void mstpdbg_process_ctl_msg(void *msg)
             break;
         }
 
+        case STP_CTL_DUMP_LIBEV_STATS:
+        {
+            stpdbg_dump_stp_stats();
+            break;
+        }
+
         case STP_CTL_CLEAR_ALL:
         {
             mstpmgr_clear_statistics_all();
@@ -1250,4 +1257,5 @@ void mstpdbg_process_ctl_msg(void *msg)
             break;
         }
     }
+    STP_DUMP_STOP;
 }

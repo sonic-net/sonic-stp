@@ -1096,8 +1096,8 @@ bool mstputil_set_port_state(MSTP_INDEX mstp_index, PORT_ID port_number, enum L2
 }
 
 /*****************************************************************************/
-/* mstputil_flush: sets the port state for all the vlans associated          */
-/* with the input mst instance to the input state                            */
+/* mstputil_flush: Flushes the FDB for a given port of a specific MST        */
+/* insance if the fdb flush is pending after topology change                 */
 /*****************************************************************************/
 bool mstputil_flush(MSTP_INDEX mstp_index, PORT_ID port_number)
 {

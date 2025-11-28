@@ -8,7 +8,9 @@
 
 extern FILE *dbgfp;
 
+#define STP_DUMP_START      dbgfp = fopen("/var/log/stp_dmp.log", "w+")
 #define STP_DUMP(fmt, ...)  do {fprintf(dbgfp, fmt, ##__VA_ARGS__); fflush(dbgfp);}while(0)
+#define STP_DUMP_STOP       fclose(dbgfp)
 
 #define L2_STATE_STRING(s, p)       l2_port_state_to_string(s, p)
 

@@ -1389,7 +1389,7 @@ int mask_to_string(BITMAP_T *bmp, uint8_t *str, uint32_t maxlen)
         return -1;
     }
 
-    int32_t bmp_id = 0;
+    int32_t bmp_id = BMP_INVALID_ID;
     uint32_t len = 0;
     do {
         if (len >= maxlen)
