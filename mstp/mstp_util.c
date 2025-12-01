@@ -1090,7 +1090,7 @@ bool mstputil_set_port_state(MSTP_INDEX mstp_index, PORT_ID port_number, enum L2
 
 	if(ifname)
 	{
-        stpsync_update_port_state(ifname, mstp_index, state);
+        stpsync_update_port_state(ifname, mst_id, state);
     }		
 	return true;
 }
@@ -1110,7 +1110,7 @@ bool mstputil_flush(MSTP_INDEX mstp_index, PORT_ID port_number)
     ifname = stp_intf_get_port_name(port_number);
     if(!ifname)
         return false;
-    stpsync_flush_instance_port(ifname, mstp_index);
+    stpsync_flush_instance_port(ifname, mst_id);
     STP_LOG_INFO("[MST %d] %s flush", mst_id, ifname);
   
 
