@@ -16,7 +16,6 @@
  */
 #include "stpctl.h"
 
-#define cmd_max STP_CTL_MAX
 CMD_LIST g_cmd_list[] = {
     "help",     STP_CTL_HELP,
     "all",      STP_CTL_DUMP_ALL,
@@ -36,20 +35,22 @@ CMD_LIST g_cmd_list[] = {
     "mstport",  STP_CTL_DUMP_MST_PORT,
 };
 
+#define CMD_LIST_COUNT (sizeof(g_cmd_list) / sizeof(g_cmd_list[0]))
+
 void print_cmds()
 {
-    int i;
+    size_t i;
 
-    for (i=0; i<cmd_max; i++)
+    for (i = 0; i < CMD_LIST_COUNT; i++)
         stpout("stpctl %s\n",g_cmd_list[i].cmd_name);
 }
 
 
 int get_cmd_type(char *name)
 {
-    int i;
+    size_t i;
 
-    for (i=0; i<cmd_max; i++)
+    for (i = 0; i < CMD_LIST_COUNT; i++)
     {
         if (strcmp(g_cmd_list[i].cmd_name, name) == 0)
             return g_cmd_list[i].cmd_type;
