@@ -109,7 +109,7 @@ int stpd_main()
 
     //Create the high priority Timer libevent
     evtimer_100ms = stpmgr_libevent_create(g_stpd_evbase, -1, EV_PERSIST, 
-            stpmgr_100ms_timer, (char *)"100MS_TIMER", &stp_100ms_tv);
+            stptimer_100ms_tick, (char *)"100MS_TIMER", &stp_100ms_tv);
     if (!evtimer_100ms)
     {
         STP_LOG_ERR("evtimer_100ms Create failed");
