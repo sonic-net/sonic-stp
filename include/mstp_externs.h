@@ -75,6 +75,7 @@ extern void mstpdata_reset();
 extern MSTP_INDEX mstpdata_get_new_index();
 extern bool mstpdata_free_index(MSTP_INDEX mstp_index);
 extern MSTP_BRIDGE * mstpdata_alloc_mstp_bridge();
+extern void mstpdata_free_mstp_bridge();
 extern MSTP_PORT * mstpdata_alloc_mstp_port(PORT_ID port_number);
 extern void mstpdata_free_port(PORT_ID port_number);
 extern MSTP_MSTI_PORT * mstpdata_alloc_msti_port(MSTP_INDEX mstp_index, PORT_ID port_number);
