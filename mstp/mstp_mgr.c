@@ -62,7 +62,12 @@ static bool mstpmgr_init_mstp_bridge(UINT16 max_instances)
 
     cist_bridge->co.rootPortId = MSTP_INVALID_PORT;
     vlan_bmp_init(&cist_bridge->co.vlanmask);
-    bmp_alloc(&cist_bridge->co.portmask, g_max_stp_port);
+    if (bmp_alloc(&cist_bridge->co.portmask, g_max_stp_port) != 0)
+    {
+        STP_LOG_ERR("Alloc cist portmask failed");
+        mstpdata_free_mstp_bridge();
+        return false;
+    }
 
     cist_bridge->bridgePriority.root = cist_bridge->co.bridgeIdentifier;
     cist_bridge->bridgePriority.extPathCost = 0;
@@ -127,6 +132,10 @@ static void mstpmgr_init_debug()
         if(debugGlobal.mstp.instance_mask)
         {
             bmp_free(debugGlobal.mstp.instance_mask);
+        }
+        if(debugGlobal.mstp.port_mask)
+        {
+            bmp_free(debugGlobal.mstp.port_mask);
         }
         STP_LOG_ERR("bmp_alloc Failed");
         return;
@@ -348,7 +357,13 @@ static bool mstpmgr_init_msti(MSTP_MSTID mstid)
 
     msti_bridge->co.rootPortId = MSTP_INVALID_PORT;
     vlan_bmp_init(&msti_bridge->co.vlanmask);
-    bmp_alloc(&msti_bridge->co.portmask, g_max_stp_port);
+    if (bmp_alloc(&msti_bridge->co.portmask, g_max_stp_port) != 0)
+    {
+        STP_LOG_ERR("[Mst %d] Alloc msti portmask failed", mstid);
+        MSTP_SET_INSTANCE_INDEX(mstp_bridge, mstid, MSTP_INDEX_INVALID);
+        mstpdata_free_index(mstp_index);
+        return false;
+    }
 
     msti_bridge->bridgePriority.designatedId =
         msti_bridge->bridgePriority.regionalRoot = msti_bridge->co.bridgeIdentifier;
@@ -809,6 +824,9 @@ bool mstpmgr_disable_port(PORT_ID port_number, bool del_flag)
     MSTP_CIST_PORT *cist_port;
     MSTP_COMMON_BRIDGE *cbridge;
 
+    if (!mstp_bridge)
+        return false;
+
     if (!IS_MEMBER(mstp_bridge->enable_mask, port_number))
         return true;
 
@@ -1108,9 +1126,6 @@ bool mstpmgr_rx_bpdu(VLAN_ID vlan_id, PORT_ID port_number, void *bufptr, UINT32 
     MAC_ADDRESS	    address;
     MSTP_COMMON_BRIDGE *cbridge;
 
-    // convert the bpdu fields from network to host order
-    mstputil_host_order_bpdu(bpdu);
-
     // update size based on hdr sizes etc. it does not include
     // crc, mac header, llc etc. make sure that the packet length does not
     // wrap around.
@@ -1119,6 +1134,9 @@ bool mstpmgr_rx_bpdu(VLAN_ID vlan_id, PORT_ID port_number, void *bufptr, UINT32 
         STP_LOG_ERR("Port %d input size %u too small", port_number, size);
         return false;
     }
+
+    // convert the bpdu fields from network to host order after size sanity checks
+    mstputil_host_order_bpdu(bpdu);
 
     size = size - sizeof(MAC_HEADER) - sizeof(LLC_HEADER);
     if (!mstputil_validate_bpdu(bpdu, size))
@@ -1154,12 +1172,12 @@ bool mstpmgr_rx_bpdu(VLAN_ID vlan_id, PORT_ID port_number, void *bufptr, UINT32 
     }
     /* Log when the rx pdu delayed by atleast one sec more than hello time */
     time_diff = current_time - last_bpdu_rx_time;
-    if ((time_diff > (mstp_bridge->cist.rootTimes.helloTime * 1000))
+    if ((time_diff > mstp_bridge->cist.rootTimes.helloTime)
             && (last_bpdu_rx_time != 0)) 
     {
-        if((time_diff - (mstp_bridge->cist.rootTimes.helloTime * 1000) >= 1000))
+        if (time_diff - mstp_bridge->cist.rootTimes.helloTime >= 1)
             STP_LOG_INFO("Port %d RX BDPU Delayed by %lu sec", port_number,
-                         (time_diff/1000));
+                         time_diff - mstp_bridge->cist.rootTimes.helloTime);
     }
 
     if (mstp_port->operEdge) 
@@ -1901,7 +1919,7 @@ static bool mstpmgr_config_msti_port_path_cost(MSTP_MSTID mstid, PORT_ID port_nu
         msti_port->co.intPortPathCost = path_cost;
 
     SET_BIT(msti_port->modified_fields, MSTP_PORT_MEMBER_PORT_PATH_COST_BIT);
-    msti_port->co.selected = true;
+    msti_port->co.selected = false;
 
     if (mstp_bridge->active) 
     {
@@ -1950,7 +1968,7 @@ static bool mstpmgr_config_msti_port_priority(MSTP_MSTID mstid, PORT_ID port_num
     msti_port->co.portId.priority = MSTP_ENCODE_PORT_PRIORITY(port_priority);
     SET_BIT(msti_port->modified_fields, MSTP_PORT_MEMBER_PORT_PRIORITY_BIT);
 
-    msti_port->co.selected = true;
+    msti_port->co.selected = false;
     if (mstp_bridge->active) 
     {
         mstp_index = MSTP_GET_INSTANCE_INDEX(mstp_bridge, mstid);
@@ -2121,7 +2139,13 @@ void mstpmgr_process_bridge_config_msg(void *msg)
                     sizeof(g_stp_base_mac_addr._ushort));
             memcpy(g_stp_base_mac, pmsg->base_mac_addr, L2_ETH_ADD_LEN);
 
-            mstpmgr_init_mstp_bridge(MSTP_MAX_INSTANCES_PER_REGION);
+            if (!mstpmgr_init_mstp_bridge(MSTP_MAX_INSTANCES_PER_REGION))
+            {
+                STP_LOG_ERR("Init Bridge failed");
+                stp_global.enable = false;
+                stp_global.proto_mode = L2_NONE;
+                return;
+            }
 
             vlan_bmp_init(&vlan_mask);
 
@@ -2146,6 +2170,11 @@ void mstpmgr_process_bridge_config_msg(void *msg)
 
         //Release all indices
         mstp_bridge = g_mstp_global.bridge;
+        if (!mstp_bridge)
+        {
+            STP_LOG_ERR("mstp_bridge NULL");
+            return;
+        }
 
         vlan_bmp_init(&vlan_mask);
         for(mstp_index = MSTP_INDEX_MIN; mstp_index <= MSTP_INDEX_MAX; mstp_index++)
@@ -2161,12 +2190,13 @@ void mstpmgr_process_bridge_config_msg(void *msg)
         while (port_id != BAD_PORT_ID)
         {
             port_vlan_mask = mstpdata_get_vlan_mask_for_port(port_id);
-            if(port_vlan_mask == NULL)
-                break;
-            for (vlan_id = vlanmask_get_first_vlan(port_vlan_mask); vlan_id != VLAN_ID_INVALID;
-                    vlan_id = vlanmask_get_next_vlan(port_vlan_mask, vlan_id))
+            if (port_vlan_mask)
             {
-                mstputil_set_kernel_bridge_port_state_for_single_vlan(vlan_id, port_id, FORWARDING);
+                for (vlan_id = vlanmask_get_first_vlan(port_vlan_mask); vlan_id != VLAN_ID_INVALID;
+                        vlan_id = vlanmask_get_next_vlan(port_vlan_mask, vlan_id))
+                {
+                    mstputil_set_kernel_bridge_port_state_for_single_vlan(vlan_id, port_id, FORWARDING);
+                }
             }
             port_id = port_mask_get_next_port(mstp_bridge->enable_mask, port_id);
         }
@@ -2576,7 +2606,7 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
     PORT_MASK *cist_stp_disabled_ports =  portmask_local_init(&l_cist_stp_disabled_ports);
     PORT_MASK *msti_stp_disabled_ports =  portmask_local_init(&l_msti_stp_disabled_ports);
     PORT_ID port_number;
-    bool restart; 
+    bool restart = false;
 	MSTP_CIST_BRIDGE *cist_bridge;
 
     if (!mstp_bridge)
