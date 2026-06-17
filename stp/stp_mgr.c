@@ -295,6 +295,11 @@ void stpmgr_disable_port(STP_CLASS *stp_class, PORT_ID port_number)
 		stptimer_stop(&stp_port_class->root_protect_timer);
 	}
 
+	if (stp_port_class->loop_guard_active)
+	{
+		stp_port_class->loop_guard_active = false;
+	}
+
 	clear_mask_bit(stp_class->enable_mask, port_number);
 	configuration_update(stp_class);
 	port_state_selection(stp_class);
@@ -1250,6 +1255,20 @@ bool stpmgr_config_root_protect(PORT_ID port_id, bool enable)
 }
 
 /*****************************************************************************/
+/* stpmgr_config_loop_protect: enables/disables loop-guard feature on the    */
+/* input port.                                                               */
+/*****************************************************************************/
+static bool stpmgr_config_loop_protect(PORT_ID port_id, bool enable)
+{
+	if (enable)
+        set_mask_bit(stp_global.loop_protect_mask, port_id);
+	else
+        clear_mask_bit(stp_global.loop_protect_mask, port_id);
+
+	return true;
+}
+
+/*****************************************************************************/
 /* stpmgr_config_root_protect_timeout: configures the timeout in seconds for */
 /* which the violated stp port is kept in blocking state.                    */
 /*****************************************************************************/
@@ -1717,9 +1736,9 @@ static void stpmgr_process_intf_config_msg(void *msg)
         return;
     }
     
-    STP_LOG_INFO("op:%d, intf:%s, enable:%d, root_grd:%d, bpdu_grd:%d , do_dis:%d, cost:%d, pri:%d, portfast:%d, uplink_fast:%d, count:%d", 
-            pmsg->opcode, pmsg->intf_name, pmsg->enabled, pmsg->root_guard, pmsg->bpdu_guard, 
-            pmsg->bpdu_guard_do_disable, pmsg->path_cost, pmsg->priority, 
+    STP_LOG_INFO("op:%d, intf:%s, enable:%d, root_grd:%d, loop_grd:%d, bpdu_grd:%d , do_dis:%d, cost:%d, pri:%d, portfast:%d, uplink_fast:%d, count:%d",
+            pmsg->opcode, pmsg->intf_name, pmsg->enabled, pmsg->root_guard, pmsg->loop_guard, pmsg->bpdu_guard,
+            pmsg->bpdu_guard_do_disable, pmsg->path_cost, pmsg->priority,
             pmsg->portfast, pmsg->uplink_fast, pmsg->count);
 
     port_id = stp_intf_get_port_id_by_name(pmsg->intf_name);
@@ -1771,8 +1790,9 @@ static void stpmgr_process_intf_config_msg(void *msg)
         if (pmsg->enabled)
         {
             stpmgr_config_root_protect(port_id, pmsg->root_guard);
+            stpmgr_config_loop_protect(port_id, pmsg->loop_guard);
             stpmgr_config_protect(port_id, pmsg->bpdu_guard, pmsg->bpdu_guard_do_disable);
-    
+
             stpmgr_config_fastspan(port_id, pmsg->portfast);
             stpmgr_config_fastuplink(port_id, pmsg->uplink_fast);
         }
@@ -1788,6 +1808,7 @@ static void stpmgr_process_intf_config_msg(void *msg)
     if (pmsg->opcode == STP_DEL_COMMAND || !pmsg->enabled)
     {
         stpmgr_config_root_protect(port_id, false);
+        stpmgr_config_loop_protect(port_id, false);
         stpmgr_config_protect(port_id, false, false);
 
         stpmgr_config_fastspan(port_id, true);

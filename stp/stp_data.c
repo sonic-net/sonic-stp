@@ -35,6 +35,7 @@ int8_t stpdata_init_global_port_mask()
     ret |= bmp_alloc(&g_stp_protect_mask, g_max_stp_port);
     ret |= bmp_alloc(&g_stp_protect_do_disable_mask, g_max_stp_port);
     ret |= bmp_alloc(&g_stp_root_protect_mask, g_max_stp_port);
+    ret |= bmp_alloc(&g_stp_loop_protect_mask, g_max_stp_port);
     ret |= bmp_alloc(&g_stp_protect_disabled_mask, g_max_stp_port);
 
     /* By default fast span is enabled on all ports */
