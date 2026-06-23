@@ -1153,16 +1153,20 @@ static bool stpmgr_config_fastspan(PORT_ID port_id, bool enable)
 
 	if (enable)
 	{
-		if(is_member(g_fastspan_config_mask, port_id))
+		if(is_member(g_fastspan_config_mask, port_id)){
+            stpsync_update_port_fast(stp_intf_get_port_name(port_id), true);
 		    return ret;
+        }
         set_mask_bit(g_fastspan_config_mask, port_id);
         set_mask_bit(g_fastspan_mask, port_id);
         stpsync_update_port_fast(stp_intf_get_port_name(port_id), true);
 	}
 	else
 	{
-		if(!is_member(g_fastspan_config_mask, port_id))
+		if(!is_member(g_fastspan_config_mask, port_id)){
+            stpsync_update_port_fast(stp_intf_get_port_name(port_id), false);
 		    return ret;
+        }
         clear_mask_bit(g_fastspan_config_mask, port_id);
         clear_mask_bit(g_fastspan_mask, port_id);
         stpsync_update_port_fast(stp_intf_get_port_name(port_id), false);
