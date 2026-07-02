@@ -293,7 +293,8 @@ static int stp_netlink_recv(int nl_fd, bool read_all)
                 if (rt_list[IFLA_IFNAME])
                 {
                     ptr = rt_list[IFLA_IFNAME];
-                    strncpy(if_db.ifname, (char *)RTA_DATA(ptr), IFNAMSIZ);
+                    strncpy(if_db.ifname, (char *)RTA_DATA(ptr), IFNAMSIZ - 1);
+                    if_db.ifname[IFNAMSIZ - 1] = '\0';
 
                     if(!stp_netlink_intf_is_valid(if_db.ifname))
                     {
