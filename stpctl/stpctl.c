@@ -163,7 +163,8 @@ int send_command(int argc, char **argv)
                 return -1;
             }
             msg.vlan_id = atoi(argv[2]);
-            strncpy(msg.intf_name, argv[3], IFNAMSIZ);
+            strncpy(msg.intf_name, argv[3], IFNAMSIZ - 1);
+            msg.intf_name[IFNAMSIZ - 1] = '\0';
             break;
         }
 
@@ -198,7 +199,8 @@ int send_command(int argc, char **argv)
                 return -1;
             }
 
-            strncpy(msg.intf_name, argv[2], IFNAMSIZ);
+            strncpy(msg.intf_name, argv[2], IFNAMSIZ - 1);
+            msg.intf_name[IFNAMSIZ - 1] = '\0';
             break;
         }
 
@@ -296,8 +298,10 @@ int send_command(int argc, char **argv)
                 msg.dbg.flags |= STPCTL_DBG_SET_PORT;
                 if (0 == strncmp("all", argv[3], 3))
                     msg.intf_name[0] = '\0';
-                else
-                    strncpy(msg.intf_name, argv[3], IFNAMSIZ);
+                else {
+                    strncpy(msg.intf_name, argv[3], IFNAMSIZ - 1);
+                    msg.intf_name[IFNAMSIZ - 1] = '\0';
+                }
                 if (0 == strncmp("on", argv[4], 2))
                     msg.dbg.port = 1;
                 else if (0 == strncmp("off", argv[4], 3))
@@ -370,7 +374,8 @@ int send_command(int argc, char **argv)
                 return -1;
             }
 
-            strncpy(msg.intf_name, argv[2], IFNAMSIZ);
+            strncpy(msg.intf_name, argv[2], IFNAMSIZ - 1);
+            msg.intf_name[IFNAMSIZ - 1] = '\0';
             break;
         }
 
@@ -383,7 +388,8 @@ int send_command(int argc, char **argv)
             }
 
             msg.vlan_id = atoi(argv[2]);
-            strncpy(msg.intf_name, argv[3], IFNAMSIZ);
+            strncpy(msg.intf_name, argv[3], IFNAMSIZ - 1);
+            msg.intf_name[IFNAMSIZ - 1] = '\0';
             break;
         }
 
@@ -406,7 +412,8 @@ int send_command(int argc, char **argv)
                 return -1;
             }
             msg.mst_id = atoi(argv[2]);
-            strncpy(msg.intf_name, argv[3], IFNAMSIZ);
+            strncpy(msg.intf_name, argv[3], IFNAMSIZ - 1);
+            msg.intf_name[IFNAMSIZ - 1] = '\0';
             break;
         }
 

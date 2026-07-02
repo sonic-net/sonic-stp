@@ -227,7 +227,8 @@ bool stp_intf_ioctl_get_ifname(uint32_t kif_index, char * if_name)
     if(ioctl(g_stpd_ioctl_sock, SIOCGIFNAME, &ifr) < 0)
         return false;
 
-    strncpy(if_name, ifr.ifr_name, IFNAMSIZ);
+    strncpy(if_name, ifr.ifr_name, IFNAMSIZ - 1);
+    if_name[IFNAMSIZ - 1] = '\0';
     return true;
 }
 
@@ -266,7 +267,8 @@ INTERFACE_NODE * stp_intf_create_intf_node(char * ifname, uint32_t kif_index)
     /* Update interface name */
     if(ifname)
     {
-        strncpy(node->ifname, ifname, IFNAMSIZ);
+        strncpy(node->ifname, ifname, IFNAMSIZ - 1);
+        node->ifname[IFNAMSIZ - 1] = '\0';
     }
     else
     {
