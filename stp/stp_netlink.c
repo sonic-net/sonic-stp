@@ -290,8 +290,7 @@ static int stp_netlink_recv(int nl_fd, bool read_all)
                 nh_len = nh->nlmsg_len;
 
                 stp_netlink_parse_rtattr(rt_list, IFLA_MAX, IFLA_RTA(ifi), nh_len);
-                if (rt_list[IFLA_IFNAME])
-                {
+                if ( rt_list[IFLA_IFNAME] ) {
                     ptr = rt_list[IFLA_IFNAME];
                     strncpy(if_db.ifname, (char *)RTA_DATA(ptr), IFNAMSIZ - 1);
                     if_db.ifname[IFNAMSIZ - 1] = '\0';
@@ -355,15 +354,23 @@ static int stp_netlink_recv(int nl_fd, bool read_all)
                             if_db.master_ifindex = *(uint32_t *)RTA_DATA(ptr);
                         }
                     }
-                    STP_LOG_INFO("RTM-%s IF:%s KIF:%u Oper:%d Bond:%d Mem:%d Master:%u", (nh->nlmsg_type == RTM_NEWLINK)?"UPDATE":"DELETE", 
-                            if_db.ifname, if_db.kif_index, if_db.oper_state, if_db.is_bond, if_db.is_member, if_db.master_ifindex); 
-                }
-                else
-                {
-                    STP_LOG_DEBUG("No ifname for kif_index :%d ", if_db.kif_index);
+                    STP_LOG_INFO( "RTM-%s IF:%s KIF:%u Oper:%d Bond:%d Mem:%d Master:%u",
+                                  (nh->nlmsg_type == RTM_NEWLINK)?"UPDATE":"DELETE", 
+                                  if_db.ifname, if_db.kif_index, if_db.oper_state,
+                                  if_db.is_bond, if_db.is_member, if_db.master_ifindex);
+
+                    stp_netlink_cb( &if_db,
+                                    ( ( nh->nlmsg_type == RTM_NEWLINK ) ? 1 : 0 ),
+                                    read_all );
+                } else {
+                    // RTM_DELLINK may omit IFLA_IFNAME; delete path uses kif_index only.
+                    if (nh->nlmsg_type == RTM_DELLINK) {
+                        stp_netlink_cb( &if_db, 0, read_all );
+                    } else {
+                        STP_LOG_DEBUG("No ifname for kif_index :%d ", if_db.kif_index);
+                    }
                 }
             }
-            stp_netlink_cb(&if_db, (nh->nlmsg_type == RTM_NEWLINK)?1:0, read_all);
         } //end for loop
 
 
