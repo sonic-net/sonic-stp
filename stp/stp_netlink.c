@@ -354,10 +354,10 @@ static int stp_netlink_recv(int nl_fd, bool read_all)
                             if_db.master_ifindex = *(uint32_t *)RTA_DATA(ptr);
                         }
                     }
-                    STP_LOG_INFO( "RTM-%s IF:%s KIF:%u Oper:%d Bond:%d Mem:%d Master:%u",
-                                  (nh->nlmsg_type == RTM_NEWLINK)?"UPDATE":"DELETE", 
-                                  if_db.ifname, if_db.kif_index, if_db.oper_state,
-                                  if_db.is_bond, if_db.is_member, if_db.master_ifindex);
+                    STP_LOG_DEBUG( "RTM-%s IF:%s KIF:%u Oper:%d Bond:%d Mem:%d Master:%u",
+                                   (nh->nlmsg_type == RTM_NEWLINK)?"UPDATE":"DELETE",
+                                   if_db.ifname, if_db.kif_index, if_db.oper_state,
+                                   if_db.is_bond, if_db.is_member, if_db.master_ifindex);
 
                     stp_netlink_cb( &if_db,
                                     ( ( nh->nlmsg_type == RTM_NEWLINK ) ? 1 : 0 ),

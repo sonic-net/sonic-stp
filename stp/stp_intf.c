@@ -490,7 +490,7 @@ void stp_intf_netlink_cb(netlink_db_t *if_db, uint8_t is_add, bool init_in_prog)
     } else if ( STP_IS_PO_PORT( if_db->ifname ) ) {
          eth_if = false;
     } else {
-        // If it is e delete then if_db->ifname can be NULL since the
+        // If it is delete then if_db->ifname can be NULL since the
         // delete path relies on if_db->kif_index. For add we need to
         // have if_db->ifname
         if ( is_add ) {
