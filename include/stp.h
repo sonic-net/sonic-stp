@@ -94,6 +94,7 @@
 #define g_stp_protect_mask stp_global.protect_mask
 #define g_stp_protect_do_disable_mask stp_global.protect_do_disable_mask
 #define g_stp_root_protect_mask stp_global.root_protect_mask
+#define g_stp_loop_protect_mask stp_global.loop_protect_mask
 #define g_stp_protect_disabled_mask stp_global.protect_disabled_mask
 #define g_stp_enable_mask stp_global.enable_mask
 #define g_stp_enable_config_mask stp_global.enable_admin_mask
@@ -120,6 +121,7 @@
 #define STP_IS_PROTECT_DO_DISABLE_CONFIGURED(_port_) IS_MEMBER(stp_global.protect_do_disable_mask, (_port_))
 #define STP_IS_PROTECT_DO_DISABLED(_port_) IS_MEMBER(stp_global.protect_disabled_mask, (_port_))
 #define STP_IS_ROOT_PROTECT_CONFIGURED(_p_) IS_MEMBER(stp_global.root_protect_mask, (_p_))
+#define STP_IS_LOOP_PROTECT_CONFIGURED(_p_) IS_MEMBER(stp_global.loop_protect_mask, (_p_))
 #define STP_IS_PROTOCOL_ENABLED(mode) (stp_global.enable == true && stp_global.proto_mode == mode)
 
 // _port_ is a pointer to either STP_PORT_CLASS or RSTP_PORT_CLASS
@@ -303,6 +305,8 @@ typedef struct
 	TIMER forward_delay_timer;
 	TIMER hold_timer;
 	TIMER root_protect_timer;
+	bool loop_guard_active;
+	bool loop_guard_synced;
 
 	UINT32 forward_transitions;
 	UINT32 rx_config_bpdu;
@@ -334,7 +338,8 @@ typedef struct
 #define STP_PORT_CLASS_PORT_FAST_BIT 14
 #define STP_PORT_CLASS_ROOT_PROTECT_BIT 15
 #define STP_PORT_CLASS_BPDU_PROTECT_BIT 16
-#define STP_PORT_CLASS_CLEAR_STATS_BIT 17
+#define STP_PORT_CLASS_LOOP_PROTECT_BIT 17
+#define STP_PORT_CLASS_CLEAR_STATS_BIT 18
 	UINT32 modified_fields;
 } __attribute__((aligned(4))) STP_PORT_CLASS;
 
@@ -371,6 +376,7 @@ typedef struct
 	PORT_MASK *protect_do_disable_mask;
 	PORT_MASK *protect_disabled_mask;
 	PORT_MASK *root_protect_mask;
+	PORT_MASK *loop_protect_mask;
 	uint16_t root_protect_timeout;
 	L2_PROTO_MODE proto_mode;
 
@@ -391,6 +397,7 @@ typedef enum
 	STP_RAS_MES_AGE_TIMER_EXPIRY,
 	STP_RAS_ROOT_PROTECT_TIMER_EXPIRY,
 	STP_RAS_ROOT_PROTECT_VIOLATION,
+	STP_RAS_LOOP_PROTECT_VIOLATION,
 	STP_RAS_ROOT_ROLE,
 	STP_RAS_DESIGNATED_ROLE,
 	STP_RAS_MP_RX_DELAY_EVENT,

@@ -387,6 +387,12 @@ void StpSync::updateStpVlanInterfaceInfo(STP_VLAN_PORT_TABLE * stp_vlan_intf)
         fvVector.push_back(rpt);
     }
 
+    if(stp_vlan_intf->loop_guard_active != 0xFF)
+    {
+        FieldValueTuple lga("loop_guard_active", to_string(stp_vlan_intf->loop_guard_active));
+        fvVector.push_back(lga);
+    }
+
     vlan = VLAN_PREFIX + to_string(stp_vlan_intf->vlan_id);
     key = vlan + ":" + ifName;
     

@@ -118,6 +118,7 @@ void stpdm_global()
     UINT8 enable_string[500], enable_admin_string[500];
     UINT8 fastspan_string[500], fastspan_admin_string[500], fastuplink_admin_string[500];
     UINT8 protect_string[500], protect_do_disable_string[500], protect_disabled_string[500], root_protect_string[500];
+    UINT8 loop_protect_string[500];
 
     mask_to_string(g_stp_enable_mask, enable_string, 500);
     mask_to_string(g_stp_enable_config_mask, enable_admin_string, 500);
@@ -125,6 +126,7 @@ void stpdm_global()
     mask_to_string(stp_global.protect_do_disable_mask, protect_do_disable_string, sizeof(protect_do_disable_string));
     mask_to_string(stp_global.protect_disabled_mask, protect_disabled_string, sizeof(protect_disabled_string));
     mask_to_string(stp_global.root_protect_mask, root_protect_string, sizeof(root_protect_string));
+    mask_to_string(stp_global.loop_protect_mask, loop_protect_string, sizeof(loop_protect_string));
     mask_to_string(g_fastspan_mask, fastspan_string, 500);
     mask_to_string(g_fastspan_config_mask, fastspan_admin_string, 500);
     mask_to_string(g_fastuplink_mask, fastuplink_admin_string, 500);
@@ -151,6 +153,7 @@ void stpdm_global()
             "protect_do_disable_mask= %s\n\t"
             "protect_disabled_mask  = %s\n\t"
             "root_protect_mask      = %s\n\t"
+            "loop_protect_mask      = %s\n\t"
             "root_protect_timeout   = %u\n\t"
             "fastspan_mask          = %s\n\t"
             "fastspan_admin_mask    = %s\n\t"
@@ -176,6 +179,7 @@ void stpdm_global()
             protect_do_disable_string,
             protect_disabled_string,
             root_protect_string,
+            loop_protect_string,
             stp_global.root_protect_timeout,
             fastspan_string,
             fastspan_admin_string,
@@ -289,6 +293,7 @@ void stpdm_port_class(STP_CLASS *stp_class, PORT_ID port_number)
             "forward_delay_timer         = %s %d\n"
             "hold timer                  = %s %d\n"
             "root_protect_timer          = %s %u\n"
+            "loop_guard_active           = %s\n"
             "forward_transitions         = %d\n"
             "rx_config_bpdu              = %d\n"
             "tx_config_bpdu              = %d\n"
@@ -313,6 +318,7 @@ void stpdm_port_class(STP_CLASS *stp_class, PORT_ID port_number)
             stp_port->hold_timer.value,
             STP_TIMER_STRING(&stp_port->root_protect_timer),
             stp_port->root_protect_timer.value,
+            stp_port->loop_guard_active ? "YES" : "NO",
             stp_port->forward_transitions,
             stp_port->rx_config_bpdu,
             stp_port->tx_config_bpdu,
