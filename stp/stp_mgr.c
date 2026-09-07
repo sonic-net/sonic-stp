@@ -1446,6 +1446,25 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
     STP_INDEX 				stp_index = STP_INDEX_INVALID;
     PVST_CONFIG_BPDU		*bpdu = NULL;
 
+    bpdu = (PVST_CONFIG_BPDU *) (((UINT8*) pkt));
+
+    // For untagged packets fetch the right VLAN for BPDU processing
+    if (vlan_id == 0) {
+        if ( bpdu->type != TCN_BPDU_TYPE ) {
+            vlan_id = ntohs(bpdu->vlan_id);
+        } else {
+             vlan_id = stputil_get_untag_vlan(port_id);
+        }
+
+        if ( !IS_VALID_VLAN( vlan_id ) ) {
+            if (STP_DEBUG_BPDU_RX(vlan_id, port_id)) {
+                STP_PKTLOG("Rx: Resolved to INVALID VLAN-%u on Port-%u", vlan_id, port_id);
+            }
+            stp_global.pvst_drop_count++;
+            return;
+        }
+    }
+
     // check for stp protect configuration.
     if (stpmgr_protect_process(port_id, vlan_id))
     {
@@ -1459,7 +1478,6 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
     }
 
     // validate pvst bpdu
-    bpdu = (PVST_CONFIG_BPDU *) (((UINT8*) pkt));
     if (!stputil_validate_pvst_bpdu(bpdu))
     {
         if (STP_DEBUG_BPDU_RX(vlan_id, port_id))
@@ -1509,8 +1527,8 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
 
 void stpmgr_process_rx_bpdu(uint16_t vlan_id, uint32_t port_id, unsigned char *pkt)
 {
-    // sanity checks
-    if (!IS_VALID_VLAN(vlan_id))
+    // Check if the VLAN is a valid non zero vlan.
+    if ( ( vlan_id != 0 ) && ( !IS_VALID_VLAN(vlan_id) ) )
     {
         if (STP_DEBUG_BPDU_RX(vlan_id, port_id))
             STP_PKTLOG("Rx: INVALID VLAN-%u on Port-%u", vlan_id, port_id);
@@ -1870,7 +1888,8 @@ static void stpmgr_process_vlan_mem_config_msg(void *msg)
 static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un client_addr)
 {
     int ret;
-    STP_LOG_INFO("rcvd %s msg type", msgtype_str[msg->msg_type]);
+
+    STP_LOG_INFO("rcvd %s msg type proto_mode %d", msgtype_str[msg->msg_type], msg->proto_mode);
 
     /* Temp code until warm boot is handled */
     if(msg->msg_type != STP_INIT_READY && msg->msg_type != STP_STPCTL_MSG)
@@ -1910,6 +1929,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             else if(msg->proto_mode == L2_MSTP)
             {
                 mstpmgr_process_bridge_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1918,6 +1940,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_vlan_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1926,6 +1951,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_vlan_intf_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1938,6 +1966,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             else if(msg->proto_mode == L2_MSTP)
             {
                 mstpmgr_process_intf_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1946,6 +1977,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_vlan_mem_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1959,6 +1993,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
             {
                 mstpdbg_process_ctl_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             stpmgr_send_reply(client_addr, (void *)msg, len);
             break;
