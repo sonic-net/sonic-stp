@@ -1442,6 +1442,25 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
     STP_INDEX 				stp_index = STP_INDEX_INVALID;
     PVST_CONFIG_BPDU		*bpdu = NULL;
 
+    bpdu = (PVST_CONFIG_BPDU *) (((UINT8*) pkt))
+
+    // For untagged packets fetch the right VLAN for BPDU processing
+    if (vlan_id == 0) {
+        if ( bpdu->type != TCN_BPDU_TYPE ) {
+            vlan_id = ntohs(bpdu->vlan_id);
+        } else {
+             vlan_id = stputil_get_untag_vlan(port_id);
+        }
+
+        if ( !IS_VALID_VLAN( vlan_id ) ) {
+            if (STP_DEBUG_BPDU_RX(vlan_id, port_id)) {
+                STP_PKTLOG("Rx: Resolved to INVALID VLAN-%u on Port-%u", vlan_id, port_id);
+            }
+            stp_global.pvst_drop_count++;
+            return;
+        }
+    }
+
     // check for stp protect configuration.
     if (stpmgr_protect_process(port_id, vlan_id))
     {
@@ -1455,7 +1474,6 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
     }
 
     // validate pvst bpdu
-    bpdu = (PVST_CONFIG_BPDU *) (((UINT8*) pkt));
     if (!stputil_validate_pvst_bpdu(bpdu))
     {
         if (STP_DEBUG_BPDU_RX(vlan_id, port_id))
@@ -1505,14 +1523,8 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
 
 void stpmgr_process_rx_bpdu(uint16_t vlan_id, uint32_t port_id, unsigned char *pkt)
 {
-    // When BPDUs arrive without VLAN get the VLAN from port's untagged vlan
-    // configuration.
-    if ( vlan_id == 0 ) {
-        vlan_id = stputil_get_untag_vlan(port_id);
-    }
-
-    // sanity checks
-    if (!IS_VALID_VLAN(vlan_id))
+    // Check if the VLAN is a valid non zero vlan.
+    if ( ( vlan_id != 0 ) && ( !IS_VALID_VLAN(vlan_id) ) )
     {
         if (STP_DEBUG_BPDU_RX(vlan_id, port_id))
             STP_PKTLOG("Rx: INVALID VLAN-%u on Port-%u", vlan_id, port_id);
