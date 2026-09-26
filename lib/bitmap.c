@@ -234,6 +234,11 @@ bool bmp_isset(BITMAP_T *bmp, uint16_t bit)
         APP_LOG_ERR("Invalid bmp_ptr");
         return false;
     }
+    if (!BMP_IS_BIT_POS_VALID(bmp, bit))
+    {
+        APP_LOG_ERR("Invalid Key : %hu", bit);
+        return false;
+    }
     if (BMP_ISSET(bmp, bit))
         return true;
 
