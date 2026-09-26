@@ -35,7 +35,7 @@
 #define BMP_FIRST16_MASK  0xffff0000
 #define BMP_SECOND16_MASK 0x0000ffff
 
-#define BMP_IS_BIT_POS_VALID(_bmp, _bit) ((_bit >= 0) && (_bit <= _bmp->nbits))
+#define BMP_IS_BIT_POS_VALID(_bmp, _bit) ((_bit >= 0) && (_bit < _bmp->nbits))
 
 #define BMP_GET_ARR_ID(_p)  (_p/BMP_MASK_BITS)
 #define BMP_GET_ARR_POS(_p) ((_p) & BMP_MASK) 
