@@ -1589,6 +1589,25 @@ void mstp_updtRcvdInfoWhileMsti(MSTP_INDEX mstp_index, PORT_ID port_number)
     }
 }
 
+/*
+ * IEEE 802.1Q root path priority vector includes RcvPortID as the last
+ * component. After equal vectors through designatedPort, prefer the lower
+ * local Port Identifier (priority then port number). rcvPort is applied only
+ * here so BPDU/PIM vector compares are unchanged.
+ */
+static bool mstp_is_better_root_candidate(SORT_RETURN vec_cmp,
+        MSTP_PORT_IDENTIFIER *cand_port_id, MSTP_PORT_IDENTIFIER *cur_port_id)
+{
+    if (vec_cmp == LESS_THAN)
+        return true;
+
+    if (vec_cmp == EQUAL_TO && cur_port_id != NULL &&
+            mstputil_compare_port_id(cand_port_id, cur_port_id) == LESS_THAN)
+        return true;
+
+    return false;
+}
+
 // 13.27.31
 void mstp_updtRolesCist(MSTP_INDEX mstp_index)
 {
@@ -1650,8 +1669,11 @@ void mstp_updtRolesCist(MSTP_INDEX mstp_index)
                         rootPathPriority.regionalRoot = cist_bridge->co.bridgeIdentifier;
                     }
 
-                    if ((mstputil_compare_cist_vectors(&rootPathPriority, &rootPriority) == LESS_THAN) && 
-                            (!mstp_port->restrictedRole))
+                    if ((!mstp_port->restrictedRole) &&
+                            mstp_is_better_root_candidate(
+                                mstputil_compare_cist_vectors(&rootPathPriority, &rootPriority),
+                                &cist_port->co.portId,
+                                cist_root_port ? &cist_root_port->co.portId : NULL))
                     {
                         root_port = port_number;
                         cist_root_port = cist_port;
@@ -1906,8 +1928,11 @@ void mstp_updtRolesMsti(MSTP_INDEX mstp_index)
                         rootPathPriority.intPathCost += msti_port->co.intPortPathCost;
                     }
 
-                    if ((mstputil_compare_msti_vectors(&rootPathPriority, &rootPriority) == LESS_THAN) &&
-                            (!mstp_port->restrictedRole))
+                    if ((!mstp_port->restrictedRole) &&
+                            mstp_is_better_root_candidate(
+                                mstputil_compare_msti_vectors(&rootPathPriority, &rootPriority),
+                                &msti_port->co.portId,
+                                msti_root_port ? &msti_root_port->co.portId : NULL))
                     {
                         root_port = port_number;
                         msti_root_port = msti_port;
