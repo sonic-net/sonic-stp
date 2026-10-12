@@ -1596,13 +1596,13 @@ void mstp_updtRcvdInfoWhileMsti(MSTP_INDEX mstp_index, PORT_ID port_number)
  * here so BPDU/PIM vector compares are unchanged.
  */
 static bool mstp_is_better_root_candidate(SORT_RETURN vec_cmp,
-        MSTP_PORT_IDENTIFIER *cand_port_id, MSTP_PORT_IDENTIFIER *cur_port_id)
+        MSTP_PORT_IDENTIFIER *cand_port_id, MSTP_PORT_IDENTIFIER *cur_root_port_id)
 {
     if (vec_cmp == LESS_THAN)
         return true;
 
-    if (vec_cmp == EQUAL_TO && cur_port_id != NULL &&
-            mstputil_compare_port_id(cand_port_id, cur_port_id) == LESS_THAN)
+    if (vec_cmp == EQUAL_TO && cur_root_port_id != NULL &&
+            mstputil_compare_port_id(cand_port_id, cur_root_port_id) == LESS_THAN)
         return true;
 
     return false;
