@@ -926,6 +926,10 @@ void stptimer_sync_port_class(STP_CLASS *stp_class, STP_PORT_CLASS * stp_port)
     {
         stp_vlan_intf.designated_port = (stp_port->designated_port.priority << 12 | stp_port->designated_port.number);
     }
+    else
+    {
+        stp_vlan_intf.designated_port = 0xFFFF;
+    }
 
     if(IS_BIT_SET(stp_port->modified_fields, STP_PORT_CLASS_MEMBER_FWD_TRANSITIONS_BIT))
     {

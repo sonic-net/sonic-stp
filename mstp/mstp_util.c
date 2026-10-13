@@ -547,6 +547,7 @@ void mstputil_compute_cist_designated_priority(MSTP_CIST_BRIDGE *cist_bridge, MS
     SET_BIT(cist_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_BRIDGE_BIT);
 
     designatedPriority->designatedPort = cist_port->co.portId;
+    SET_BIT(cist_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT);
 
 }
 
@@ -569,6 +570,7 @@ void mstputil_compute_msti_designated_priority(MSTP_MSTI_BRIDGE *msti_bridge, MS
 	SET_BIT(msti_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_BRIDGE_BIT);
 
     designatedPriority->designatedPort = msti_port->co.portId;
+    SET_BIT(msti_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT);
 }
 
 /*****************************************************************************/
@@ -1731,6 +1733,10 @@ void mstputil_sync_cist_port(PORT_ID port_number)
     {
         mstp_intf.designated_port = (cist_port->designatedPriority.designatedPort.priority << 12 | cist_port->designatedPriority.designatedPort.number);
     }
+    else
+    {
+        mstp_intf.designated_port = 0xFFFF;
+    }
 
     if(IS_BIT_SET(cist_port->co.modified_fields, MSTP_PORT_MEMBER_PORT_ROLE_BIT))
     {
@@ -1885,6 +1891,10 @@ void mstputil_sync_msti_port(MSTP_INDEX mstp_index, PORT_ID port_number)
     if(IS_BIT_SET(msti_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT))
     {
         mstp_intf.designated_port = (msti_port->designatedPriority.designatedPort.priority << 12 | msti_port->designatedPriority.designatedPort.number);
+    }
+    else
+    {
+        mstp_intf.designated_port = 0xFFFF;
     }
 
     if(IS_BIT_SET(msti_port->co.modified_fields, MSTP_PORT_MEMBER_PORT_ROLE_BIT))

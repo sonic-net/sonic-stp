@@ -345,7 +345,7 @@ void StpSync::updateStpVlanInterfaceInfo(STP_VLAN_PORT_TABLE * stp_vlan_intf)
         fvVector.push_back(db);
     }
     
-    if(stp_vlan_intf->designated_port != 0)
+    if(stp_vlan_intf->designated_port != 0xFFFF)
     {
         FieldValueTuple dp("desig_port", to_string(stp_vlan_intf->designated_port));
         fvVector.push_back(dp);
@@ -717,7 +717,7 @@ void StpSync::updateStpMstInterfaceInfo(STP_MST_PORT_TABLE * stp_mst_intf)
         fvVector.push_back(db);
     }
     
-    if(stp_mst_intf->designated_port != 0)
+    if(stp_mst_intf->designated_port != 0xFFFF)
     {
         FieldValueTuple dp("desig_port", to_string(stp_mst_intf->designated_port));
         fvVector.push_back(dp);
