@@ -1372,23 +1372,20 @@ void stpmgr_rx_stp_bpdu(uint16_t vlan_id, uint32_t port_id, char *pkt)
         return;
     }
 
-    // untagged ieee 802.1d bpdus processing
-    if (stputil_is_port_untag(vlan_id, port_id))
+    // 3 - if STP untagged BPDU is received and STP or RSTP is enabled on
+    // native vlan, STP BPDU gets processed by STP or RSTP respectively,
+    // else will be processed by MSTP
+    //
+    // We are here only when protocol mode is set to L2_PVSTP and the
+    // BPDU "protocol_version_id" is either STP_VERSION_ID/RSTP_VERSION_ID
+    //
+    // For untagged ports set vlan_id as 1
+    if ( stputil_is_port_untag(vlan_id, port_id) )
     {
         vlan_id = 1;
+    }
 
-        // 3 - if STP untagged BPDU is received and STP or RSTP is enabled on native vlan, 
-        // STP BPDU gets processed by STP or RSTP respectively,else will be processed by MSTP
-        if (stputil_is_protocol_enabled(L2_PVSTP) && (bpdu->protocol_version_id == STP_VERSION_ID))
-        {
-            flag = stputil_get_index_from_vlan(vlan_id, &stp_index);
-        }
-    }
-    else // Tagged BPDU Processing
-    {	
-        if (stputil_is_protocol_enabled(L2_PVSTP))
-            flag = stputil_get_index_from_vlan(vlan_id, &stp_index);
-    }
+    flag = stputil_get_index_from_vlan(vlan_id, &stp_index);
 
     // rstp/stp processing
     if (!flag)
@@ -1523,21 +1520,36 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
 
 void stpmgr_process_rx_bpdu(uint16_t vlan_id, uint32_t port_id, unsigned char *pkt)
 {
-    // Check if the VLAN is a valid non zero vlan.
-    if ( ( vlan_id != 0 ) && ( !IS_VALID_VLAN(vlan_id) ) )
-    {
-        if (STP_DEBUG_BPDU_RX(vlan_id, port_id))
-            STP_PKTLOG("Rx: INVALID VLAN-%u on Port-%u", vlan_id, port_id);
-        return;
-    }
+    // Check DA mac to determine if this is PVST or STP BPDU
+    // PVST := 01 00 0c cc cc cd
+    // STP  := 01 80 c2 00 00 00
+    if ( pkt[1] == 0x80 ) {
+        // This is a STP BPDU
+        if ( !IS_VALID_VLAN(vlan_id) ) {
+            if ( STP_DEBUG_BPDU_RX(vlan_id, port_id) ) {
+                STP_PKTLOG("Rx: STP BPDU with INVALID VLAN-%u on Port-%u",
+                           vlan_id, port_id);
+            }
+            return;
+        }
 
-    //check DA mac
-    //PVST := 01 00 0c cc cc cd
-    //STP  := 01 80 c2 00 00 00
-    if (pkt[1] == 128) //pkt[1] == 0x80
         stpmgr_rx_stp_bpdu(vlan_id, port_id, pkt);
+    }
     else
+    {
+        // Allow NULL vlan to PVST since we could find the actual
+        // vlan from the PVST BPDU itself.
+        if ( ( vlan_id != 0 ) && ( !IS_VALID_VLAN(vlan_id) ) )
+        {
+            if ( STP_DEBUG_BPDU_RX(vlan_id, port_id) ) {
+                STP_PKTLOG("Rx: PVST BPDU with INVALID VLAN-%u on Port-%u",
+                           vlan_id, port_id);
+            }
+            return;
+        }
+
         stpmgr_rx_pvst_bpdu(vlan_id, port_id, pkt);
+    }
 }
 
 void stpmgr_100ms_timer(evutil_socket_t fd, short what, void *arg)
