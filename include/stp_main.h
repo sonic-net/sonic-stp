@@ -57,6 +57,7 @@ struct netlink_db_s;
 
 #define STP_ETH_NAME_PREFIX_LEN 8
 
+#define STP_IPC_MAX_MSG_SIZE        10*1024  // 10k bytes, instance config with vlan 1-4094 has message length over 8k bytes
 /*
  * STP-LIBEVENT Priority-Mapping
  * - STP sockets:

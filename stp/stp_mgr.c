@@ -1993,20 +1993,28 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
 /* Process all messages from clients (STPMGRd) */
 void stpmgr_recv_client_msg(evutil_socket_t fd, short what, void *arg)
 {
-    char buffer[4096];
+    char buffer[STP_IPC_MAX_MSG_SIZE];
     int len;
     struct sockaddr_un client_sock;
 
     g_stpd_stats_libev_ipc++;
 
     len = sizeof(struct sockaddr_un);
-    len = recvfrom(fd, buffer, 4096, 0, (struct sockaddr *) &client_sock, &len);
+    len = recvfrom(fd, buffer, STP_IPC_MAX_MSG_SIZE, 0, (struct sockaddr *) &client_sock, &len);
     if (len == -1)
     {
         STP_LOG_ERR("recv  message error %s", strerror(errno));
     }
     else
     {
+        STP_IPC_MSG *ipc_msg = (STP_IPC_MSG *)buffer;
+        if (ipc_msg->msg_len > (unsigned int)(len - sizeof(STP_IPC_MSG)))
+        {
+            STP_LOG_ERR("message length mismatch, type %s msg_len=%u, received=%d",
+                msgtype_str[ipc_msg->msg_type], ipc_msg->msg_len, len);
+            return;
+        }
+
         stpmgr_process_ipc_msg((STP_IPC_MSG *)buffer, len, client_sock);
     }
 }
