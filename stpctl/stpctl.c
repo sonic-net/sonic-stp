@@ -83,6 +83,8 @@ int connect_server()
         close(stpd_fd);
         return -1;
     }
+
+    return 0;
 }
 
 int send_msg_stpd(STP_MSG_TYPE msgType, uint32_t msgLen, void *data)

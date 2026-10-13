@@ -1376,23 +1376,20 @@ void stpmgr_rx_stp_bpdu(uint16_t vlan_id, uint32_t port_id, char *pkt)
         return;
     }
 
-    // untagged ieee 802.1d bpdus processing
-    if (stputil_is_port_untag(vlan_id, port_id))
+    // 3 - if STP untagged BPDU is received and STP or RSTP is enabled on
+    // native vlan, STP BPDU gets processed by STP or RSTP respectively,
+    // else will be processed by MSTP
+    //
+    // We are here only when protocol mode is set to L2_PVSTP and the
+    // BPDU "protocol_version_id" is either STP_VERSION_ID/RSTP_VERSION_ID
+    //
+    // For untagged ports set vlan_id as 1
+    if ( stputil_is_port_untag(vlan_id, port_id) )
     {
         vlan_id = 1;
+    }
 
-        // 3 - if STP untagged BPDU is received and STP or RSTP is enabled on native vlan, 
-        // STP BPDU gets processed by STP or RSTP respectively,else will be processed by MSTP
-        if (stputil_is_protocol_enabled(L2_PVSTP) && (bpdu->protocol_version_id == STP_VERSION_ID))
-        {
-            flag = stputil_get_index_from_vlan(vlan_id, &stp_index);
-        }
-    }
-    else // Tagged BPDU Processing
-    {	
-        if (stputil_is_protocol_enabled(L2_PVSTP))
-            flag = stputil_get_index_from_vlan(vlan_id, &stp_index);
-    }
+    flag = stputil_get_index_from_vlan(vlan_id, &stp_index);
 
     // rstp/stp processing
     if (!flag)
@@ -1446,6 +1443,25 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
     STP_INDEX 				stp_index = STP_INDEX_INVALID;
     PVST_CONFIG_BPDU		*bpdu = NULL;
 
+    bpdu = (PVST_CONFIG_BPDU *) (((UINT8*) pkt));
+
+    // For untagged packets fetch the right VLAN for BPDU processing
+    if (vlan_id == 0) {
+        if ( bpdu->type != TCN_BPDU_TYPE ) {
+            vlan_id = ntohs(bpdu->vlan_id);
+        } else {
+             vlan_id = stputil_get_untag_vlan(port_id);
+        }
+
+        if ( !IS_VALID_VLAN( vlan_id ) ) {
+            if (STP_DEBUG_BPDU_RX(vlan_id, port_id)) {
+                STP_PKTLOG("Rx: Resolved to INVALID VLAN-%u on Port-%u", vlan_id, port_id);
+            }
+            stp_global.pvst_drop_count++;
+            return;
+        }
+    }
+
     // check for stp protect configuration.
     if (stpmgr_protect_process(port_id, vlan_id))
     {
@@ -1459,7 +1475,6 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
     }
 
     // validate pvst bpdu
-    bpdu = (PVST_CONFIG_BPDU *) (((UINT8*) pkt));
     if (!stputil_validate_pvst_bpdu(bpdu))
     {
         if (STP_DEBUG_BPDU_RX(vlan_id, port_id))
@@ -1509,21 +1524,36 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
 
 void stpmgr_process_rx_bpdu(uint16_t vlan_id, uint32_t port_id, unsigned char *pkt)
 {
-    // sanity checks
-    if (!IS_VALID_VLAN(vlan_id))
-    {
-        if (STP_DEBUG_BPDU_RX(vlan_id, port_id))
-            STP_PKTLOG("Rx: INVALID VLAN-%u on Port-%u", vlan_id, port_id);
-        return;
-    }
+    // Check DA mac to determine if this is PVST or STP BPDU
+    // PVST := 01 00 0c cc cc cd
+    // STP  := 01 80 c2 00 00 00
+    if ( pkt[1] == 0x80 ) {
+        // This is a STP BPDU
+        if ( !IS_VALID_VLAN(vlan_id) ) {
+            if ( STP_DEBUG_BPDU_RX(vlan_id, port_id) ) {
+                STP_PKTLOG("Rx: STP BPDU with INVALID VLAN-%u on Port-%u",
+                           vlan_id, port_id);
+            }
+            return;
+        }
 
-    //check DA mac
-    //PVST := 01 00 0c cc cc cd
-    //STP  := 01 80 c2 00 00 00
-    if (pkt[1] == 128) //pkt[1] == 0x80
         stpmgr_rx_stp_bpdu(vlan_id, port_id, pkt);
+    }
     else
+    {
+        // Allow NULL vlan to PVST since we could find the actual
+        // vlan from the PVST BPDU itself.
+        if ( ( vlan_id != 0 ) && ( !IS_VALID_VLAN(vlan_id) ) )
+        {
+            if ( STP_DEBUG_BPDU_RX(vlan_id, port_id) ) {
+                STP_PKTLOG("Rx: PVST BPDU with INVALID VLAN-%u on Port-%u",
+                           vlan_id, port_id);
+            }
+            return;
+        }
+
         stpmgr_rx_pvst_bpdu(vlan_id, port_id, pkt);
+    }
 }
 
 void stpmgr_100ms_timer(evutil_socket_t fd, short what, void *arg)
@@ -1870,7 +1900,8 @@ static void stpmgr_process_vlan_mem_config_msg(void *msg)
 static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un client_addr)
 {
     int ret;
-    STP_LOG_INFO("rcvd %s msg type", msgtype_str[msg->msg_type]);
+
+    STP_LOG_INFO("rcvd %s msg type proto_mode %d", msgtype_str[msg->msg_type], msg->proto_mode);
 
     /* Temp code until warm boot is handled */
     if(msg->msg_type != STP_INIT_READY && msg->msg_type != STP_STPCTL_MSG)
@@ -1910,6 +1941,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             else if(msg->proto_mode == L2_MSTP)
             {
                 mstpmgr_process_bridge_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1918,6 +1952,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_vlan_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1926,6 +1963,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_vlan_intf_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1938,6 +1978,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             else if(msg->proto_mode == L2_MSTP)
             {
                 mstpmgr_process_intf_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1946,6 +1989,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             if(msg->proto_mode == L2_PVSTP)
             {
                 stpmgr_process_vlan_mem_config_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             break;
         }
@@ -1959,6 +2005,9 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
             else if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
             {
                 mstpdbg_process_ctl_msg(msg->data);
+            } else
+            {
+                STP_LOG_ERR("Invalid proto_mode %d", msg->proto_mode);
             }
             stpmgr_send_reply(client_addr, (void *)msg, len);
             break;
