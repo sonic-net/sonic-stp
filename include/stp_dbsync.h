@@ -63,7 +63,7 @@ typedef struct {
     uint32_t designated_cost;
     char designated_root[STP_SYNC_BRIDGE_ID_LEN];
     char designated_bridge[STP_SYNC_BRIDGE_ID_LEN];
-    char designated_port;
+    uint16_t designated_port;
 
     uint32_t forward_transitions;
     uint32_t tx_config_bpdu;
@@ -111,7 +111,7 @@ typedef struct {
     uint32_t path_cost;
     uint8_t port_priority;
     uint8_t port_role;
-    char designated_port;
+    uint16_t designated_port;
 
     uint32_t forward_transitions;
     uint32_t tx_bpdu;

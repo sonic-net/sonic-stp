@@ -239,12 +239,18 @@ static void mstp_pim_action(MSTP_INDEX mstp_index, PORT_ID port_number, void *bp
 			cport->infoIs = MSTP_INFOIS_MINE;
 			if (cist)
 			{
+				if (mstputil_compare_port_id(&cist_port->portPriority.designatedPort,
+						&cist_port->designatedPriority.designatedPort) != EQUAL_TO)
+					SET_BIT(cist_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT);
 				cist_port->portPriority = cist_port->designatedPriority;
 				cist_port->portTimes = cist_port->designatedTimes;
 				mstp_port->newInfoCist = true;
 			}
 			else
 			{
+				if (mstputil_compare_port_id(&msti_port->portPriority.designatedPort,
+						&msti_port->designatedPriority.designatedPort) != EQUAL_TO)
+					SET_BIT(msti_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT);
 				msti_port->portPriority = msti_port->designatedPriority;
 				msti_port->portTimes = msti_port->designatedTimes;
 				mstp_port->newInfoMsti = true;
@@ -281,11 +287,17 @@ static void mstp_pim_action(MSTP_INDEX mstp_index, PORT_ID port_number, void *bp
 			cport->synced = cport->synced && cport->agreed;
 			if (cist)
 			{
+				if (mstputil_compare_port_id(&cist_port->portPriority.designatedPort,
+						&cist_port->msgPriority.designatedPort) != EQUAL_TO)
+					SET_BIT(cist_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT);
 				cist_port->portPriority = cist_port->msgPriority;
 				cist_port->portTimes = cist_port->msgTimes;
 			}
 			else
 			{
+				if (mstputil_compare_port_id(&msti_port->portPriority.designatedPort,
+						&msti_port->msgPriority.designatedPort) != EQUAL_TO)
+					SET_BIT(msti_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT);
 				msti_port->portPriority = msti_port->msgPriority;
 				msti_port->portTimes = msti_port->msgTimes;
 			}
