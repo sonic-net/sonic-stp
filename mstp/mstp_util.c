@@ -1731,7 +1731,7 @@ void mstputil_sync_cist_port(PORT_ID port_number)
 
     if(IS_BIT_SET(cist_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT))
     {
-        mstp_intf.designated_port = (cist_port->designatedPriority.designatedPort.priority << 12 | cist_port->designatedPriority.designatedPort.number);
+        mstp_intf.designated_port = (cist_port->portPriority.designatedPort.priority << 12 | cist_port->portPriority.designatedPort.number);
     }
     else
     {
@@ -1890,7 +1890,7 @@ void mstputil_sync_msti_port(MSTP_INDEX mstp_index, PORT_ID port_number)
 
     if(IS_BIT_SET(msti_port->modified_fields, MSTP_PORT_MEMBER_DESIGN_PORT_BIT))
     {
-        mstp_intf.designated_port = (msti_port->designatedPriority.designatedPort.priority << 12 | msti_port->designatedPriority.designatedPort.number);
+        mstp_intf.designated_port = (msti_port->portPriority.designatedPort.priority << 12 | msti_port->portPriority.designatedPort.number);
     }
     else
     {
