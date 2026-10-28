@@ -2181,6 +2181,11 @@ void mstpmgr_process_bridge_config_msg(void *msg)
         stp_intf_reset_port_params();
         mstpdata_reset_vlan_port_db();
         mstpdata_reset_port_vlan_db();
+
+        // The CLI no longer wipes CONFIG_DB port rows on a global disable,
+        // so no per-port DELs arrive; drop all protocol state from APPL_DB
+        // here, as startup does.
+        stpsync_clear_appdb_stp_tables();
     }
 }
 
@@ -2841,6 +2846,12 @@ void mstpmgr_update_vlan_port_mask(void *msg)
 
         if(port_list[port_count].tagging_mode == 0)
             mstpdata_update_untag_vlan_for_port(port_id, pmsg->vlan_id);
+        else if(pmsg->add && mstpdata_get_untag_vlan_for_port(port_id) == pmsg->vlan_id)
+        {
+            /* The member was untagged and is now tagged: it no longer
+             * carries the PVID, so a later re-add must not hand it back. */
+            mstpdata_update_untag_vlan_for_port(port_id, VLAN_ID_INVALID);
+        }
     }
 
     if(!is_mask_clear(port_mask))

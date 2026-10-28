@@ -915,10 +915,11 @@ bool mstputil_set_kernel_bridge_port_state_for_single_vlan(VLAN_ID vlan_id, PORT
 
     untag_vlan = mstpdata_get_untag_vlan_for_port(port_number);
 
+    /* The untagged VLAN is also the PVID; without it untagged frames are dropped. */
     if(state == FORWARDING) 
     {
         snprintf(cmd_buff, 100, "/sbin/bridge vlan add vid %u dev %s %s", vlan_id, 
-            stp_intf_get_port_name(port_number), ((vlan_id == untag_vlan)?"untagged":"tagged"));
+            stp_intf_get_port_name(port_number), ((vlan_id == untag_vlan)?"pvid untagged":"tagged"));
         ret = system(cmd_buff);
         if(ret == -1)
         {
@@ -984,13 +985,14 @@ bool mstputil_set_kernel_bridge_port_state(MSTP_INDEX mstp_index, PORT_ID port_n
         copy_mask((BITMAP_T *)&vlanmask, mstp_vlanmask);
     }
 
+    /* The untagged VLAN is also the PVID; without it untagged frames are dropped. */
     if(state == FORWARDING)  
     {
         vlan_id = vlanmask_get_first_vlan(&vlanmask);
         while (vlan_id != VLAN_ID_INVALID)
         {
             snprintf(cmd_buff, 100, "/sbin/bridge vlan add vid %u dev %s %s", vlan_id, 
-                stp_intf_get_port_name(port_number), ((vlan_id == untag_vlan)?"untagged":"tagged"));
+                stp_intf_get_port_name(port_number), ((vlan_id == untag_vlan)?"pvid untagged":"tagged"));
             ret = system(cmd_buff);
             if(ret == -1)
             {

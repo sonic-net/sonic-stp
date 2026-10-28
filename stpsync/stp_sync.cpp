@@ -540,6 +540,9 @@ void StpSync::clearAllStpAppDbTables(void)
     //m_stpVlanInstanceTable.clear();
     m_stpPortTable.clear();
     //m_stpPortStateTable.clear();
+    // No consumer drains these, so unswept rows outlive the stpd run that wrote them.
+    m_stpMstTable.clear();
+    m_stpMstPortTable.clear();
     m_stpFastAgeFlushTable.clear();
     SWSS_LOG_NOTICE("STP clear all APP DB STP tables");
 }
