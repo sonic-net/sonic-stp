@@ -71,6 +71,7 @@ typedef struct {
     uint32_t tx_tcn_bpdu;
     uint32_t rx_tcn_bpdu;
     uint32_t root_protect_timer;
+    uint8_t loop_guard_active;
 
     uint8_t clear_stats;
     uint32_t modified_fields;

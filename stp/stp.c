@@ -491,7 +491,7 @@ void make_forwarding(STP_CLASS *stp_class, PORT_ID port_number)
 {
 	STP_PORT_CLASS *stp_port_class = GET_STP_PORT_CLASS(stp_class, port_number);
 
-	if ((stp_port_class->state == BLOCKING) && (!is_timer_active(&stp_port_class->root_protect_timer)))
+	if ((stp_port_class->state == BLOCKING) && (!is_timer_active(&stp_port_class->root_protect_timer)) && (!stp_port_class->loop_guard_active))
 	{
 	
 		stp_port_class->state = LISTENING;
@@ -726,6 +726,24 @@ void message_age_timer_expiry(STP_CLASS *stp_class, PORT_ID port_number)
 	stp_port_class = GET_STP_PORT_CLASS(stp_class, port_number);
 	stp_port_class->self_loop = false;
 
+	/* Loop Guard: if configured on a non-designated port, enter loop-inconsistent
+	 * state instead of allowing the port to become designated/forwarding */
+	if (STP_IS_LOOP_PROTECT_CONFIGURED(port_number) &&
+	    !designated_port(stp_class, port_number))
+	{
+		stp_port_class->loop_guard_active = true;
+		stp_port_class->loop_guard_synced = false;
+		stp_port_class->state = BLOCKING;
+		stputil_set_port_state(stp_class, stp_port_class);
+		SET_BIT(stp_port_class->modified_fields, STP_PORT_CLASS_LOOP_PROTECT_BIT);
+		SET_BIT(stp_port_class->modified_fields, STP_PORT_CLASS_MEMBER_PORT_STATE_BIT);
+		STP_SYSLOG("STP: Loop Guard interface %s, VLAN %u loop-inconsistent (BPDUs lost)",
+		    stp_intf_get_port_name(port_number), stp_class->vlan_id);
+		STP_LOG_INFO("STP_RAS_LOOP_PROTECT_VIOLATION I:%lu P:%lu V:%u",
+		    GET_STP_INDEX(stp_class), port_number, stp_class->vlan_id);
+		return;
+	}
+
 	root = root_bridge(stp_class);
 	become_designated_port(stp_class, port_number);
 	configuration_update(stp_class);
@@ -876,6 +894,9 @@ void send_tcn_bpdu(STP_CLASS* stp_class, PORT_ID port_number)
 
 	if (stptimer_is_active(&stp_port_class->root_protect_timer))
 		return;
-	
+
+	if (stp_port_class->loop_guard_active)
+		return;
+
 	stputil_send_pvst_bpdu(stp_class, port_number, TCN_BPDU_TYPE);
 }

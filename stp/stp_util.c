@@ -498,6 +498,27 @@ static bool stputil_root_protect_violation(STP_CLASS *stp_class, PORT_ID port_nu
 	return true;
 }
 
+
+/*****************************************************************************/
+/* stputil_loop_guard_bpdu_recovery: called when a BPDU is received on a     */
+/* loop-inconsistent port. clears the loop guard active flag, logs recovery,  */
+/* and marks the port state as modified.                                      */
+/*****************************************************************************/
+static void stputil_loop_guard_bpdu_recovery(STP_CLASS *stp_class, PORT_ID port_number)
+{
+	STP_PORT_CLASS *stp_port;
+
+	stp_port = GET_STP_PORT_CLASS(stp_class, port_number);
+
+	STP_SYSLOG("STP: Loop Guard interface %s, VLAN %u consistent (BPDU received)",
+	        stp_intf_get_port_name(port_number), stp_class->vlan_id);
+
+	stp_port->loop_guard_active = false;
+	stp_port->loop_guard_synced = false;
+	SET_BIT(stp_port->modified_fields, STP_PORT_CLASS_LOOP_PROTECT_BIT);
+	SET_BIT(stp_port->modified_fields, STP_PORT_CLASS_MEMBER_PORT_STATE_BIT);
+}
+
 /*****************************************************************************/
 /* stputil_root_protect_validate: routine validates the bpdu to see that it  */
 /* is conforming to the root protect configuration.                          */
@@ -779,6 +800,16 @@ void stputil_process_bpdu(STP_INDEX stp_index, PORT_ID port_number, void *buffer
 		return;
 	}
 
+	// Loop Guard: if port is in loop-inconsistent state and receives a BPDU, recover
+	if (STP_IS_LOOP_PROTECT_CONFIGURED(port_number))
+	{
+		STP_PORT_CLASS *stp_port_lg = GET_STP_PORT_CLASS(stp_class, port_number);
+		if (stp_port_lg->loop_guard_active)
+		{
+			stputil_loop_guard_bpdu_recovery(stp_class, port_number);
+		}
+	}
+
 	last_bpdu_rx_time = stp_class->last_bpdu_rx_time;
 	current_time = sys_get_seconds();
 	stp_class->last_bpdu_rx_time = current_time;			
@@ -898,7 +929,12 @@ void stptimer_sync_port_class(STP_CLASS *stp_class, STP_PORT_CLASS * stp_port)
         if(timer_value != 0 && stp_port->state == BLOCKING)
             strcpy(stp_vlan_intf.port_state, "ROOT-INC");
         else
-            strcpy(stp_vlan_intf.port_state, l2_port_state_to_string(stp_port->state, stp_port->port_id.number));
+        {
+            if(stp_port->loop_guard_active && stp_port->state == BLOCKING)
+                strcpy(stp_vlan_intf.port_state, "LOOP-INC");
+            else
+                strcpy(stp_vlan_intf.port_state, l2_port_state_to_string(stp_port->state, stp_port->port_id.number));
+        }
 
         if (stp_port->state == DISABLED)
         {
@@ -963,6 +999,16 @@ void stptimer_sync_port_class(STP_CLASS *stp_class, STP_PORT_CLASS * stp_port)
     else
     {
         stp_vlan_intf.root_protect_timer = -1;
+    }
+
+    if(IS_BIT_SET(stp_port->modified_fields, STP_PORT_CLASS_LOOP_PROTECT_BIT))
+    {
+        stp_vlan_intf.loop_guard_active = stp_port->loop_guard_active ? 1 : 0;
+        stp_port->loop_guard_synced = true;
+    }
+    else
+    {
+        stp_vlan_intf.loop_guard_active = -1;
     }
 
     if(IS_BIT_SET(stp_port->modified_fields, STP_PORT_CLASS_CLEAR_STATS_BIT))
@@ -1120,7 +1166,10 @@ void stputil_sync_port_counters(STP_CLASS *stp_class, STP_PORT_CLASS * stp_port)
 
 	if (is_timer_active(&stp_port->root_protect_timer))
 	    SET_BIT(stp_port->modified_fields, STP_PORT_CLASS_ROOT_PROTECT_BIT);
-        
+
+	if (stp_port->loop_guard_active && !stp_port->loop_guard_synced)
+	    SET_BIT(stp_port->modified_fields, STP_PORT_CLASS_LOOP_PROTECT_BIT);
+
     stptimer_sync_port_class(stp_class, stp_port);
 }
 
@@ -1302,21 +1351,34 @@ void stptimer_update(STP_CLASS *stp_class)
 			(stp_port_class->root_protect_timer.active && !STP_IS_ROOT_PROTECT_CONFIGURED(port_number)))
 		{
 			stp_port_class->root_protect_timer.active = false;
-			stputil_root_protect_timer_expired(stp_class, port_number);	
+			stputil_root_protect_timer_expired(stp_class, port_number);
 
             if (debugGlobal.stp.enabled)
             {
                 if (STP_DEBUG_VP(stp_class->vlan_id, port_number))
                 {
-                    STP_LOG_INFO("I:%lu P:%u V:%u Ev:%d",GET_STP_INDEX(stp_class),port_number, 
+                    STP_LOG_INFO("I:%lu P:%u V:%u Ev:%d",GET_STP_INDEX(stp_class),port_number,
                             stp_class->vlan_id,STP_RAS_ROOT_PROTECT_TIMER_EXPIRY);
                 }
             }
             else
             {
-                STP_LOG_INFO("I:%lu P:%u V:%u Ev:%d",GET_STP_INDEX(stp_class),port_number, 
+                STP_LOG_INFO("I:%lu P:%u V:%u Ev:%d",GET_STP_INDEX(stp_class),port_number,
                     stp_class->vlan_id,STP_RAS_ROOT_PROTECT_TIMER_EXPIRY);
             }
+		}
+
+		/* Loop guard config can be removed while the port is already loop-inconsistent.
+		 * In that case, clear loop-guard state and run the same recovery path used on
+		 * message-age expiry so the port can be re-evaluated immediately. */
+		if (stp_port_class->loop_guard_active && !STP_IS_LOOP_PROTECT_CONFIGURED(port_number))
+		{
+			stp_port_class->loop_guard_active = false;
+			stp_port_class->loop_guard_synced = false;
+			SET_BIT(stp_port_class->modified_fields, STP_PORT_CLASS_LOOP_PROTECT_BIT);
+			SET_BIT(stp_port_class->modified_fields, STP_PORT_CLASS_MEMBER_PORT_STATE_BIT);
+
+			message_age_timer_expiry(stp_class, port_number);
 		}
 
 		port_number = port_mask_get_next_port(stp_class->enable_mask, port_number);
@@ -1441,4 +1503,3 @@ void sys_assert(int status)
 {
     assert(status);
 }
-
