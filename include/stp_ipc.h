@@ -74,7 +74,7 @@ typedef struct STP_IPC_MSG
     unsigned int msg_len;
     L2_PROTO_MODE proto_mode;
     char data[0];
-} __attribute__((aligned(4))) STP_IPC_MSG;
+} __attribute__((packed)) STP_IPC_MSG;
 
 #define STP_SET_COMMAND 1
 #define STP_DEL_COMMAND 0
@@ -98,7 +98,9 @@ typedef struct PORT_ATTR
     char intf_name[IFNAMSIZ];
     int8_t mode;
     uint8_t enabled;
-} PORT_ATTR;
+    // Add padding to align to 4 bytes
+    uint16_t padding;
+} __attribute__((packed)) PORT_ATTR;
 
 typedef struct STP_VLAN_CONFIG_MSG
 {
@@ -126,11 +128,11 @@ typedef struct STP_VLAN_PORT_CONFIG_MSG
 
 typedef struct VLAN_ATTR
 {
-    int8_t mode;
-    uint8_t padding[3];  // Explicit padding for alignment
     int inst_id;
     int vlan_id;
-} VLAN_ATTR;
+    int8_t mode;
+    uint8_t padding[3];  // Explicit padding for alignment
+} __attribute__((packed)) VLAN_ATTR;
 
 typedef struct STP_PORT_CONFIG_MSG
 {
@@ -138,17 +140,18 @@ typedef struct STP_PORT_CONFIG_MSG
     char intf_name[IFNAMSIZ];
     uint8_t enabled;
     uint8_t root_guard;
+    uint8_t loop_guard;
     uint8_t bpdu_guard;
     uint8_t bpdu_guard_do_disable;
     uint8_t portfast;
     uint8_t uplink_fast;
-    uint8_t edge;
+    uint8_t edge_port;
     LinkType    link_type;          // MSTP only
     int path_cost;
     int priority;
     int count;
     VLAN_ATTR vlan_list[0];
-} STP_PORT_CONFIG_MSG;
+} __attribute__((packed)) STP_PORT_CONFIG_MSG;
 
 typedef struct STP_VLAN_MEM_CONFIG_MSG
 {
@@ -161,7 +164,7 @@ typedef struct STP_VLAN_MEM_CONFIG_MSG
     char intf_name[IFNAMSIZ];
     int path_cost;
     int priority;
-} STP_VLAN_MEM_CONFIG_MSG;
+} __attribute__((packed)) STP_VLAN_MEM_CONFIG_MSG;
 
 typedef struct STP_MST_GLOBAL_CONFIG_MSG {
     uint8_t     opcode; // enable/disable
@@ -170,26 +173,26 @@ typedef struct STP_MST_GLOBAL_CONFIG_MSG {
     uint8_t     forward_delay;
     uint8_t     hello_time;
     uint8_t     max_age;
-    uint8_t     max_hop;
+    uint8_t     max_hops;
 }__attribute__((packed)) STP_MST_GLOBAL_CONFIG_MSG;
 
 
 typedef struct VLAN_LIST{
     uint16_t    vlan_id;
-}VLAN_LIST;
+}__attribute__((packed)) VLAN_LIST;
 
-typedef struct MST_INST_CONFIG_MSG
+typedef struct STP_MST_INST_CONFIG_MSG
 {
     uint8_t     opcode; // enable/disable
     uint16_t    mst_id;
     int         priority;
     uint16_t    vlan_count;
     VLAN_LIST   vlan_list[0];
-} __attribute__((packed))  MST_INST_CONFIG_MSG;
+} __attribute__((packed))  STP_MST_INST_CONFIG_MSG;
 
 typedef struct STP_MST_INSTANCE_CONFIG_MSG {
     uint8_t    mst_count;
-    MST_INST_CONFIG_MSG mst_list[0];
+    STP_MST_INST_CONFIG_MSG  mst_list[0];
 } __attribute__((packed)) STP_MST_INSTANCE_CONFIG_MSG;
 
 typedef struct STP_MST_INST_PORT_CONFIG_MSG {
@@ -204,7 +207,7 @@ typedef struct PORT_LIST
 {
     char        intf_name[IFNAMSIZ];
     int8_t      tagging_mode;
-}PORT_LIST;
+}__attribute__((packed)) PORT_LIST;
 
 typedef struct STP_MST_VLAN_PORT_MAP
 {
@@ -213,7 +216,7 @@ typedef struct STP_MST_VLAN_PORT_MAP
     int8_t      stp_mode;
     uint8_t     add;    
     PORT_LIST   port_list[0];
-}STP_MST_VLAN_PORT_MAP;
+}__attribute__((packed)) STP_MST_VLAN_PORT_MAP;
 
 typedef struct MSTP_INST_VLAN_LIST
 {
