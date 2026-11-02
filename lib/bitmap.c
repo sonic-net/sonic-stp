@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+#include <assert.h>
 #include "bitmap.h"
 
 /*
@@ -117,8 +118,16 @@ BMP_ID bmp_find_first_set_bit_after_offset(BITMAP_T *bmp, uint16_t offset)
     uint16_t offset_index   = offset >> BMP_MASK_LEN;
     uint16_t offset_pos     = offset & BMP_MASK;
 
-    unsigned int offset_bmp = bmp->arr[offset_index];
+    unsigned int offset_bmp;
     int16_t first_set_bit   = BMP_INVALID_ID;
+
+    /* A caller walking the bitmap asks for the bit after the last one it
+     * found, so an offset one past the final bit is the normal way a scan
+     * ends. arr[] holds bmp->size words and nothing beyond them. */
+    if (offset_index >= bmp->size)
+        return BMP_INVALID_ID;
+
+    offset_bmp = bmp->arr[offset_index];
     //mask-out0(set 0) to all bits before offset
     offset_bmp = offset_bmp & (-1U << offset_pos);
 
@@ -130,7 +139,8 @@ BMP_ID bmp_find_first_set_bit_after_offset(BITMAP_T *bmp, uint16_t offset)
             return bmp_id;
         }
         offset_index++;
-        offset_bmp = bmp->arr[offset_index];
+        if(offset_index < bmp->size)
+            offset_bmp = bmp->arr[offset_index];
     }while(offset_index < bmp->size);
 
     return BMP_INVALID_ID;
@@ -145,9 +155,13 @@ BMP_ID bmp_find_first_unset_bit_after_offset(BITMAP_T *bmp, uint16_t offset)
     uint16_t offset_index   = offset >> BMP_MASK_LEN;
     uint16_t offset_pos     = offset & BMP_MASK;
 
-    unsigned int offset_bmp = bmp->arr[offset_index];
+    unsigned int offset_bmp;
     int16_t first_set_bit   = BMP_INVALID_ID;
 
+    if (offset_index >= bmp->size)
+        return BMP_INVALID_ID;
+
+    offset_bmp = bmp->arr[offset_index];
     //mask-out1(set 1) to all bits before offset
     offset_bmp = offset_bmp | (~(-1U << offset_pos));
 
@@ -300,6 +314,11 @@ void bmp_print_all(BITMAP_T *bmp)
         APP_LOG_INFO("");
 }
 
+int8_t bmp_ensure(BITMAP_T **bmp, uint16_t nbits)
+{
+    return *bmp ? 0 : bmp_alloc(bmp, nbits);
+}
+
 void bmp_free(BITMAP_T *bmp)
 {
     free(bmp);
@@ -312,6 +331,15 @@ int8_t bmp_alloc(BITMAP_T **bmp, uint16_t nbits)
     if (nbits == 0)
     {
         APP_LOG_ERR("Invalid params : nbits-%u", nbits);
+        return -1;
+    }
+
+    /* A second allocation would replace a populated bitmap with an empty one
+     * and leak the first, so it is a bug at the caller, not a request. */
+    if (*bmp != NULL)
+    {
+        APP_LOG_CRITICAL("bitmap already allocated for %u bits", (*bmp)->nbits);
+        assert(*bmp == NULL);
         return -1;
     }
 

@@ -37,7 +37,7 @@
 
 #define BMP_IS_BIT_POS_VALID(_bmp, _bit) ((_bit >= 0) && (_bit <= _bmp->nbits))
 
-#define BMP_GET_ARR_ID(_p)  (_p/BMP_MASK_BITS)
+#define BMP_GET_ARR_ID(_p)  ((_p)/BMP_MASK_BITS)
 #define BMP_GET_ARR_POS(_p) ((_p) & BMP_MASK) 
 
 #define BMP_SET(_bmp,_k)   (_bmp->arr[BMP_GET_ARR_ID(_k)] |= (1U<<(BMP_GET_ARR_POS(_k))))
@@ -100,6 +100,8 @@ void bmp_reset_all(BITMAP_T *bmp);
 void bmp_print_all(BITMAP_T *bmp);
 int8_t bmp_init(BITMAP_T *bmp);
 int8_t bmp_alloc(BITMAP_T **bmp, uint16_t nbits);
+/* bmp_alloc for a mask that may already exist: an existing one is kept. */
+int8_t bmp_ensure(BITMAP_T **bmp, uint16_t nbits);
 void bmp_free(BITMAP_T *bmp);
 
 BMP_ID bmp_find_first_unset_bit_after_offset(BITMAP_T *bmp, uint16_t offset);
