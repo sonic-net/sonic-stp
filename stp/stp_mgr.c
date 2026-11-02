@@ -1379,8 +1379,9 @@ void stpmgr_rx_stp_bpdu(uint16_t vlan_id, uint32_t port_id, char *pkt)
     // We are here only when protocol mode is set to L2_PVSTP and the
     // BPDU "protocol_version_id" is either STP_VERSION_ID/RSTP_VERSION_ID
     //
-    // For untagged ports set vlan_id as 1
-    if ( stputil_is_port_untag(vlan_id, port_id) )
+    // If vlan_id is NULL and port is untagged on untagged vlan 1 then
+    // set vlan_id as 1
+    if (vlan_id == 0 && stputil_is_port_untag(1, port_id))
     {
         vlan_id = 1;
     }
@@ -1525,14 +1526,6 @@ void stpmgr_process_rx_bpdu(uint16_t vlan_id, uint32_t port_id, unsigned char *p
     // STP  := 01 80 c2 00 00 00
     if ( pkt[1] == 0x80 ) {
         // This is a STP BPDU
-        if ( !IS_VALID_VLAN(vlan_id) ) {
-            if ( STP_DEBUG_BPDU_RX(vlan_id, port_id) ) {
-                STP_PKTLOG("Rx: STP BPDU with INVALID VLAN-%u on Port-%u",
-                           vlan_id, port_id);
-            }
-            return;
-        }
-
         stpmgr_rx_stp_bpdu(vlan_id, port_id, pkt);
     }
     else
