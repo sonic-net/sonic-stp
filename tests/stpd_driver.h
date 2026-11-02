@@ -65,15 +65,46 @@ void stptest_mstp_enable(void);
 void stptest_mstp_disable(void);
 void stptest_mstp_global_config(void);
 void stptest_mstp_add_instance(uint16_t mst_id, const uint16_t *vlans, uint16_t vlan_count);
+/* One instance record as stpmgrd sends it: SET or DEL, with a priority. */
+void stptest_mstp_instance_msg(uint16_t mst_id, int set, int priority,
+                               const uint16_t *vlans, uint16_t vlan_count);
+/* The instance's bridge priority (0 is the CIST), -1 if it does not exist. */
+int stptest_mstp_bridge_priority(uint16_t mst_id);
 void stptest_mstp_vlan_ports(uint16_t vlan_id, int add);
 /* One port's membership of the VLAN, with its tagging mode: 0 untagged, 1 tagged. */
 void stptest_mstp_vlan_port(uint16_t vlan_id, const char *ifname, int mode, int add);
+/* One instance message mapping `count` consecutive VLANs from `first_vlan`. */
+void stptest_mstp_add_instance_range(uint16_t mst_id, uint16_t first_vlan, uint16_t count);
+/* How many VLANs the daemon holds in the instance, 0 if it does not exist. */
+unsigned int stptest_mstp_instance_vlan_count(uint16_t mst_id);
 void stptest_mstp_port_config(const char *ifname, int enabled);
 void stptest_mstp_inst_port_config(const char *ifname, uint16_t mst_id);
+/* Recomputes the MST configuration digest and copies its 16 bytes to `out`. */
+void stptest_mstp_config_digest(uint8_t *out);
 
 /* Runs the daemon's 100ms timer callback n times. The VLAN and MST rows
  * are written by the periodic sync, so a scenario has to tick before
  * APPL_DB looks like a running switch. */
+/* Malformed frames, for the IPC bounds tests. The messages are built here
+ * rather than in the test so the daemon's headers stay out of C++.
+ * Each sends a frame carrying room for one element while claiming more.
+ */
+void stptest_send_mst_instance_bogus_vlan_count(uint16_t mst_id, int claimed_count);
+void stptest_send_mst_vlan_ports_bogus_port_count(uint16_t vlan_id, int claimed_count);
+void stptest_send_pvst_vlan_bogus_port_count(uint16_t vlan_id, int claimed_count);
+
+/* Well formed on the wire, but msg_len claims room for claimed_count. */
+void stptest_send_mst_instance_inflated_msg_len(uint16_t mst_id, int claimed_count);
+
+/* A payload too short for the message's own fixed part. */
+void stptest_send_mst_instance_truncated(void);
+
+/* A frame shorter than the IPC header itself. */
+void stptest_send_short_frame(size_t total_bytes);
+
+/* A msg_type outside the enum, which is used to index a name table. */
+void stptest_send_unknown_msg_type(int msg_type);
+
 void stptest_tick(unsigned int ticks);
 
 /* Received BPDUs, handed to the daemon's receive path as the packet socket
@@ -84,6 +115,15 @@ void stptest_pvst_rx_config_bpdu(const char *ifname, uint16_t vlan_id, uint16_t 
                                  const uint8_t root_mac[6], uint32_t root_path_cost, int tc);
 /* A PVST topology change notification. */
 void stptest_pvst_rx_tcn_bpdu(const char *ifname, uint16_t vlan_id);
+/* A CIST BPDU from a designated port of a bridge in another region arrives
+ * on `ifname`: `active` sets the learning and forwarding flags, `tc` the
+ * topology change flag. Whether it is superior is up to the priority. */
+void stptest_mstp_rx_cist_bpdu(const char *ifname, uint16_t root_priority,
+                               const uint8_t root_mac[6], int active, int tc);
+int stptest_mstp_cist_root_port_is(const char *ifname);
+/* Whether the daemon treats the port as an operational edge port. */
+int stptest_mstp_port_is_edge(const char *ifname);
+
 /* The daemon's own view of the VLAN's tree. */
 int stptest_pvst_is_root(uint16_t vlan_id);
 int stptest_pvst_root_port_is(uint16_t vlan_id, const char *ifname);

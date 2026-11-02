@@ -61,8 +61,13 @@ static bool mstpmgr_init_mstp_bridge(UINT16 max_instances)
     cist_bridge->co.bridgeIdentifier.priority = MSTP_ENCODE_PRIORITY(MSTP_DFLT_PRIORITY);
 
     cist_bridge->co.rootPortId = MSTP_INVALID_PORT;
-    vlan_bmp_init(&cist_bridge->co.vlanmask);
-    bmp_alloc(&cist_bridge->co.portmask, g_max_stp_port);
+    /* This runs again on every enable. The masks hold the VLANs and ports
+     * enrolled in the CIST, so they are created once and kept. */
+    if (!cist_bridge->co.portmask)
+    {
+        vlan_bmp_init(&cist_bridge->co.vlanmask);
+        bmp_ensure(&cist_bridge->co.portmask, g_max_stp_port);
+    }
 
     cist_bridge->bridgePriority.root = cist_bridge->co.bridgeIdentifier;
     cist_bridge->bridgePriority.extPathCost = 0;
@@ -120,8 +125,8 @@ static void mstpmgr_init_debug()
 
     debugGlobal.mstp.all_instance = true;
 
-    ret |= bmp_alloc(&debugGlobal.mstp.instance_mask, MSTP_MAX_INSTANCES_PER_REGION);
-    ret |= bmp_alloc(&debugGlobal.mstp.port_mask, g_max_stp_port);
+    ret |= bmp_ensure(&debugGlobal.mstp.instance_mask, MSTP_MAX_INSTANCES_PER_REGION);
+    ret |= bmp_ensure(&debugGlobal.mstp.port_mask, g_max_stp_port);
     if (ret != 0)
     {
         if(debugGlobal.mstp.instance_mask)
@@ -347,8 +352,11 @@ static bool mstpmgr_init_msti(MSTP_MSTID mstid)
     NET_TO_HOST_MAC(&msti_bridge->co.bridgeIdentifier.address, &g_stp_base_mac_addr);
 
     msti_bridge->co.rootPortId = MSTP_INVALID_PORT;
-    vlan_bmp_init(&msti_bridge->co.vlanmask);
-    bmp_alloc(&msti_bridge->co.portmask, g_max_stp_port);
+    if (!msti_bridge->co.portmask)
+    {
+        vlan_bmp_init(&msti_bridge->co.vlanmask);
+        bmp_ensure(&msti_bridge->co.portmask, g_max_stp_port);
+    }
 
     msti_bridge->bridgePriority.designatedId =
         msti_bridge->bridgePriority.regionalRoot = msti_bridge->co.bridgeIdentifier;
@@ -2560,10 +2568,8 @@ void mstpmgr_process_mstp_global_config_msg(void *msg)
 /*****************************************************************************/
 void mstpmgr_process_inst_vlan_config_msg(void *msg)
 {
-    STP_MST_INSTANCE_CONFIG_MSG *pmsg = (STP_MST_INSTANCE_CONFIG_MSG *)msg;
     VLAN_LIST *vlan_attr;
     uint16_t vlan_count = 0;
-    int mst_count;
     uint32_t port_id;
     VLAN_MASK vlan_mask, cist_vmask, *cist_vlanmask, *msti_vlanmask, add_vlan_mask;
     MSTP_INDEX mstp_index;
@@ -2581,39 +2587,50 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
     PORT_MASK *cist_stp_disabled_ports =  portmask_local_init(&l_cist_stp_disabled_ports);
     PORT_MASK *msti_stp_disabled_ports =  portmask_local_init(&l_msti_stp_disabled_ports);
     PORT_ID port_number;
-    bool restart; 
+    bool restart = false; 
 	MSTP_CIST_BRIDGE *cist_bridge;
 
     if (!mstp_bridge)
         return;
 
-    if (!pmsg)
+    if (!msg)
     {
         STP_LOG_ERR("rcvd NULL msg");
         return;
     }
 
-
-    mst_list = pmsg->mst_list;
-    for (mst_count = 0; mst_count < pmsg->mst_count; mst_count++)
+    /* stpmgrd sends one bare instance record per message (swss stpmgr.h
+     * STP_MST_INST_CONFIG_MSG), with no mst_count header in front of it.
+     * Reading one would shift every field by a byte. */
+    mst_list = (MST_INST_CONFIG_MSG *)msg;
     {
         mst_id = mst_list->mst_id;
 
         if(MSTP_IS_CIST_MSTID(mst_id))
         {
-            mstpmgr_config_cist_priority(mst_list->priority);
-
-            mst_list = (MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(MST_INST_CONFIG_MSG)));
-            continue;
+            /* a DEL carries priority 0 from the sender's calloc'd buffer -
+             * applying it would pin the bridge at CIST priority 0, so reset
+             * to the default instead */
+            if(mst_list->opcode == STP_SET_COMMAND)
+            {
+                mstpmgr_config_cist_priority(mst_list->priority);
+            }
+            else
+            {
+                mstpmgr_config_cist_priority(MSTP_DFLT_PRIORITY);
+            }
+            return;
         }
         else
         {
-            /* bridge priority configuration is done before instance to vlan mapping config. 
-             * Ignore it, will update priority once the instance to vlan mapping comes */
-            if(mst_list->opcode == STP_SET_COMMAND && mst_list->vlan_count == 0)
+            /* A priority arrives before the VLAN mapping, so an instance that
+             * does not exist yet is created once its VLANs come. An instance
+             * that already runs and loses its last VLAN must still be told,
+             * or it keeps running on VLANs the operator has unmapped. */
+            if(mst_list->opcode == STP_SET_COMMAND && mst_list->vlan_count == 0 &&
+               mstputil_get_index(mst_id) == MSTP_INDEX_INVALID)
             {
-                mst_list = (MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(MST_INST_CONFIG_MSG)));
-                continue;
+                return;
             }
         }
         vlan_bmp_init(&vlan_mask);
@@ -2818,7 +2835,6 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
             }
         }
 
-        mst_list = (MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(MST_INST_CONFIG_MSG)) + (mst_list->vlan_count * sizeof(VLAN_LIST)));
     }
    
     if(restart)

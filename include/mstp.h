@@ -481,6 +481,9 @@ typedef struct
 #define MSTP_BRIDGE_DATA_MEMBER_TX_HOLD_COUNT_BIT         15  
 #define MSTP_BRIDGE_DATA_MEMBER_IN_ROOT_PATH_COST_BIT     16
 
+/* Every bit above, seeded at bridge allocation so the first sync is complete. */
+#define MSTP_BRIDGE_DATA_MEMBER_ALL_BITS                  0x0001FFFF
+
 typedef struct
 {
 	MSTP_COMMON_BRIDGE      co;
@@ -495,6 +498,7 @@ typedef struct
 
 	UINT8                   pad[2]; // to word align
     UINT32                  modified_fields;
+    UINT32                  initial_sync_pending_bitmap;
 } MSTP_CIST_BRIDGE;
 
 #define MSTP_PORT_MEMBER_PORT_ID_BIT               0
@@ -563,6 +567,7 @@ typedef struct
 
  
     UINT32                  modified_fields;
+    UINT32                  initial_sync_pending_bitmap;
 } MSTP_MSTI_BRIDGE;
 
 typedef struct

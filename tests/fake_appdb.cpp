@@ -37,6 +37,7 @@ FakeAppDb &FakeAppDb::instance()
 void FakeAppDb::set(const std::string &table, const std::string &key)
 {
     m_tables[table].insert(key);
+    m_writes[table]++;
 }
 
 void FakeAppDb::del(const std::string &table, const std::string &key)
@@ -54,6 +55,18 @@ void FakeAppDb::clearTable(const std::string &table)
 void FakeAppDb::reset()
 {
     m_tables.clear();
+    m_writes.clear();
+}
+
+size_t FakeAppDb::writes(const std::string &table) const
+{
+    std::map<std::string, size_t>::const_iterator it = m_writes.find(table);
+    return (it == m_writes.end()) ? 0 : it->second;
+}
+
+void FakeAppDb::resetWrites()
+{
+    m_writes.clear();
 }
 
 const std::set<std::string> &FakeAppDb::keys(const std::string &table) const

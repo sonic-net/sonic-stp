@@ -187,11 +187,6 @@ typedef struct MST_INST_CONFIG_MSG
     VLAN_LIST   vlan_list[0];
 } __attribute__((packed))  MST_INST_CONFIG_MSG;
 
-typedef struct STP_MST_INSTANCE_CONFIG_MSG {
-    uint8_t    mst_count;
-    MST_INST_CONFIG_MSG mst_list[0];
-} __attribute__((packed)) STP_MST_INSTANCE_CONFIG_MSG;
-
 typedef struct STP_MST_INST_PORT_CONFIG_MSG {
     uint8_t     opcode; // enable/disable
     char        intf_name[IFNAMSIZ];

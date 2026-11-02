@@ -45,6 +45,12 @@ public:
     bool empty(const std::string &table) const;
     std::string dump() const;
 
+    // How many set() calls a table has taken, not how many distinct keys
+    // survive. Repeated writes of one key are invisible to size(), so a
+    // table the daemon rewrites in a loop needs this to be seen at all.
+    size_t writes(const std::string &table) const;
+    void resetWrites();
+
     // Every table the daemon writes into.
     static const std::vector<std::string> &allTables();
 
@@ -58,6 +64,7 @@ public:
 private:
     FakeAppDb() = default;
     std::map<std::string, std::set<std::string> > m_tables;
+    std::map<std::string, size_t> m_writes;
 };
 
 } // namespace stptest

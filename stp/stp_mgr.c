@@ -1888,10 +1888,131 @@ static void stpmgr_process_vlan_mem_config_msg(void *msg)
     }
 }
 
+/* Bound one message's payload before any handler walks it.
+ *
+ * Every handler trusts the count embedded in the payload, so a frame that
+ * claims more elements than it carries is walked off the end of the receive
+ * buffer. The counts are checked here rather than in each handler because
+ * only four messages are variable length and the rule is the same for all
+ * of them: whatever the count says, the bytes actually received have to be
+ * there. The division avoids overflowing the multiplication that would
+ * otherwise compute the claimed size.
+ */
+static bool stpmgr_ipc_payload_ok(int msg_type, const void *data, unsigned int payload_len)
+{
+    size_t fixed;
+    size_t elem_size = 0;
+    long   count = 0;
+
+    switch (msg_type)
+    {
+        case STP_INIT_READY:
+            fixed = sizeof(STP_INIT_READY_MSG);
+            break;
+        case STP_BRIDGE_CONFIG:
+            fixed = sizeof(STP_BRIDGE_CONFIG_MSG);
+            break;
+        case STP_VLAN_PORT_CONFIG:
+            fixed = sizeof(STP_VLAN_PORT_CONFIG_MSG);
+            break;
+        case STP_VLAN_MEM_CONFIG:
+            fixed = sizeof(STP_VLAN_MEM_CONFIG_MSG);
+            break;
+        case STP_STPCTL_MSG:
+            fixed = sizeof(STP_CTL_MSG);
+            break;
+        case STP_MST_GLOBAL_CONFIG:
+            fixed = sizeof(STP_MST_GLOBAL_CONFIG_MSG);
+            break;
+        case STP_MST_INST_PORT_CONFIG:
+            fixed = sizeof(STP_MST_INST_PORT_CONFIG_MSG);
+            break;
+
+        case STP_VLAN_CONFIG:
+            fixed = sizeof(STP_VLAN_CONFIG_MSG);
+            elem_size = sizeof(PORT_ATTR);
+            if (payload_len >= fixed)
+                count = ((const STP_VLAN_CONFIG_MSG *)data)->count;
+            break;
+        case STP_PORT_CONFIG:
+            fixed = sizeof(STP_PORT_CONFIG_MSG);
+            elem_size = sizeof(VLAN_ATTR);
+            if (payload_len >= fixed)
+                count = ((const STP_PORT_CONFIG_MSG *)data)->count;
+            break;
+        case STP_MST_INST_CONFIG:
+            fixed = sizeof(MST_INST_CONFIG_MSG);
+            elem_size = sizeof(VLAN_LIST);
+            if (payload_len >= fixed)
+                count = ((const MST_INST_CONFIG_MSG *)data)->vlan_count;
+            break;
+        case STP_MST_VLAN_PORT_LIST_CONFIG:
+            fixed = sizeof(STP_MST_VLAN_PORT_MAP);
+            elem_size = sizeof(PORT_LIST);
+            if (payload_len >= fixed)
+                count = ((const STP_MST_VLAN_PORT_MAP *)data)->port_count;
+            break;
+
+        default:
+            STP_LOG_ERR("no payload rule for msg type %d", msg_type);
+            return false;
+    }
+
+    if (payload_len < fixed)
+    {
+        STP_LOG_ERR("%s: payload is %u bytes, needs at least %zu",
+                    msgtype_str[msg_type], payload_len, fixed);
+        return false;
+    }
+
+    if (count < 0)
+    {
+        STP_LOG_ERR("%s: negative element count %ld",
+                    msgtype_str[msg_type], count);
+        return false;
+    }
+
+    if (elem_size != 0 && (size_t)count > (payload_len - fixed) / elem_size)
+    {
+        STP_LOG_ERR("%s: claims %ld elements but the payload has room for %zu",
+                    msgtype_str[msg_type], count,
+                    (payload_len - fixed) / elem_size);
+        return false;
+    }
+
+    return true;
+}
+
 static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un client_addr)
 {
     int ret;
+    unsigned int payload_len;
+
+    if (len < (int)sizeof(STP_IPC_MSG))
+    {
+        STP_LOG_ERR("rcvd %d byte ipc frame, too short to hold a message header", len);
+        return;
+    }
+
+    /* Range-check before indexing msgtype_str with it. */
+    if (msg->msg_type <= STP_INVALID_MSG || msg->msg_type >= STP_MAX_MSG)
+    {
+        STP_LOG_ERR("rcvd ipc msg with unknown type %d", msg->msg_type);
+        return;
+    }
+
     STP_LOG_INFO("rcvd %s msg type", msgtype_str[msg->msg_type]);
+
+    /* Both senders set msg_len to the payload size. Take the smaller of what
+     * was claimed and what arrived, so neither a truncated frame nor an
+     * inflated msg_len lets a handler read past the buffer.
+     */
+    payload_len = (unsigned int)len - (unsigned int)offsetof(STP_IPC_MSG, data);
+    if (msg->msg_len < payload_len)
+        payload_len = msg->msg_len;
+
+    if (!stpmgr_ipc_payload_ok(msg->msg_type, msg->data, payload_len))
+        return;
 
     /* Temp code until warm boot is handled */
     if(msg->msg_type != STP_INIT_READY && msg->msg_type != STP_STPCTL_MSG)
@@ -2012,19 +2133,30 @@ static void stpmgr_process_ipc_msg(STP_IPC_MSG *msg, int len, struct sockaddr_un
 }
 
 /* Process all messages from clients (STPMGRd) */
+/* Room for the largest message a sender can build: a VLAN's full port list
+ * or an instance's full VLAN list, each a few thousand entries at most. */
+#define STP_IPC_RX_BUF_LEN 65536
+
 void stpmgr_recv_client_msg(evutil_socket_t fd, short what, void *arg)
 {
-    char buffer[4096];
+    static char buffer[STP_IPC_RX_BUF_LEN];
     int len;
     struct sockaddr_un client_sock;
 
     g_stpd_stats_libev_ipc++;
 
     len = sizeof(struct sockaddr_un);
-    len = recvfrom(fd, buffer, 4096, 0, (struct sockaddr *) &client_sock, &len);
+    /* MSG_TRUNC reports the datagram's real length, so a clipped message is
+     * seen as such rather than parsed as a shorter one. */
+    len = recvfrom(fd, buffer, sizeof(buffer), MSG_TRUNC, (struct sockaddr *) &client_sock, &len);
     if (len == -1)
     {
         STP_LOG_ERR("recv  message error %s", strerror(errno));
+    }
+    else if (len > (int)sizeof(buffer))
+    {
+        STP_LOG_CRITICAL("dropped a %d byte ipc message: larger than the %d byte receive buffer",
+                         len, STP_IPC_RX_BUF_LEN);
     }
     else
     {
