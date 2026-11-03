@@ -331,21 +331,28 @@ void stptest_pvst_port_config(const char *ifname, uint16_t inst_id, int enabled,
 }
 
 static void stptest_pvst_port_config_full(const char *ifname, uint16_t inst_id, int enabled,
-                                          int portfast, int mode, int bpdu_guard);
+                                          int portfast, int mode, int bpdu_guard,
+                                          int bpdu_guard_do_disable);
 
 void stptest_pvst_port_config_tagging(const char *ifname, uint16_t inst_id, int enabled,
                                       int portfast, int mode)
 {
-    stptest_pvst_port_config_full(ifname, inst_id, enabled, portfast, mode, 1);
+    stptest_pvst_port_config_full(ifname, inst_id, enabled, portfast, mode, 1, 0);
 }
 
 void stptest_pvst_port_config_unguarded(const char *ifname, uint16_t inst_id, int enabled)
 {
-    stptest_pvst_port_config_full(ifname, inst_id, enabled, 0, STPTEST_UNTAGGED_MODE, 0);
+    stptest_pvst_port_config_full(ifname, inst_id, enabled, 0, STPTEST_UNTAGGED_MODE, 0, 0);
+}
+
+void stptest_pvst_port_config_guard_shutdown(const char *ifname, uint16_t inst_id, int enabled)
+{
+    stptest_pvst_port_config_full(ifname, inst_id, enabled, 0, STPTEST_UNTAGGED_MODE, 1, 1);
 }
 
 static void stptest_pvst_port_config_full(const char *ifname, uint16_t inst_id, int enabled,
-                                          int portfast, int mode, int bpdu_guard)
+                                          int portfast, int mode, int bpdu_guard,
+                                          int bpdu_guard_do_disable)
 {
     char buffer[sizeof(STP_PORT_CONFIG_MSG) + sizeof(VLAN_ATTR)];
     STP_PORT_CONFIG_MSG *msg = (STP_PORT_CONFIG_MSG *)buffer;
@@ -355,6 +362,7 @@ static void stptest_pvst_port_config_full(const char *ifname, uint16_t inst_id, 
     snprintf(msg->intf_name, IFNAMSIZ, "%s", ifname);
     msg->enabled = enabled ? 1 : 0;
     msg->bpdu_guard = bpdu_guard ? 1 : 0;
+    msg->bpdu_guard_do_disable = bpdu_guard_do_disable ? 1 : 0;
     msg->portfast = portfast ? 1 : 0;
     msg->path_cost = 0;
     msg->priority = -1;

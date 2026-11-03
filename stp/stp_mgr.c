@@ -1137,6 +1137,9 @@ bool stpmgr_protect_process(PORT_ID rx_port, uint16_t vlan_id)
             else
                 STP_SYSLOG("STP: Warning - BPDU(VLAN %u) received on BPDU guard enabled interface %s", vlan_id, stp_intf_get_port_name(rx_port));
         }
+        // Warn only: the BPDU still goes to the protocol. Dropping it would
+        // make the guard a BPDU filter, and a blocked port would go forwarding.
+        return (false);
     }
 
 	return (true);

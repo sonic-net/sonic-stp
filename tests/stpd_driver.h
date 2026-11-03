@@ -51,6 +51,8 @@ void stptest_pvst_vlan_member(uint16_t vlan_id, uint16_t inst_id, const char *if
 /* Port config with BPDU guard off, for tests that feed the port BPDUs. The
  * other port_config helpers enable the guard, as the CLI defaults do. */
 void stptest_pvst_port_config_unguarded(const char *ifname, uint16_t inst_id, int enabled);
+/* BPDU guard with --shutdown: a BPDU err-disables the port. */
+void stptest_pvst_port_config_guard_shutdown(const char *ifname, uint16_t inst_id, int enabled);
 
 /* Same, with the tagging mode: 0 untagged, 1 tagged. */
 void stptest_pvst_vlan_member_tagging(uint16_t vlan_id, uint16_t inst_id,

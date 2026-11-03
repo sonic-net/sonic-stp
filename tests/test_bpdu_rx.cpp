@@ -71,16 +71,34 @@ TEST_F(BpduRxTest, ASuperiorBpduMakesItsPortTheRootPort)
     EXPECT_TRUE(stptest_pvst_root_port_is(kVlan, port0()));
 }
 
-// The same BPDU on a port with BPDU guard is dropped, not acted on.
-TEST_F(BpduRxTest, AGuardedPortDropsTheBpdu)
+// BPDU guard without --shutdown only warns: the BPDU still drives the
+// protocol. If it were dropped, a blocked port facing another bridge would
+// lose its neighbour and go forwarding.
+TEST_F(BpduRxTest, AWarnOnlyGuardStillActsOnTheBpdu)
 {
     stptest_pvst_port_config(port0(), kInst, 1, 0);
+
+    hello(port0(), kSuperiorPriority, kLowMac, 3);
+
+    EXPECT_FALSE(stptest_pvst_is_root(kVlan))
+        << "the warn-only guard dropped the BPDU; the daemon dropped "
+        << stptest_pvst_drop_count() << " frames";
+    EXPECT_TRUE(stptest_pvst_root_port_is(kVlan, port0()));
+}
+
+// With --shutdown the BPDU is dropped and the port is err-disabled.
+TEST_F(BpduRxTest, AShutdownGuardDropsTheBpdu)
+{
+    stptest_pvst_port_config_guard_shutdown(port0(), kInst, 1);
     unsigned int before = stptest_pvst_drop_count();
 
     hello(port0(), kSuperiorPriority, kLowMac, 1);
 
     EXPECT_TRUE(stptest_pvst_is_root(kVlan));
     EXPECT_GT(stptest_pvst_drop_count(), before);
+    // The err-disable is a request to orchagent, published on the port's row.
+    EXPECT_EQ(db().keys(stptest::kStpPortTable).count(port0()), 1u)
+        << "no err-disable request was published for the port";
 }
 
 TEST_F(BpduRxTest, AnInferiorBpduLeavesTheBridgeRoot)
