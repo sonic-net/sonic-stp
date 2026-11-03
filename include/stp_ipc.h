@@ -6,6 +6,28 @@
 #ifndef __STP_IPC_H__
 #define __STP_IPC_H__
 
+#include <stddef.h>
+#include <stdint.h>
+
+#if defined(__cplusplus)
+#define STP_IPC_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
+#else
+#define STP_IPC_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
+#endif
+
+/* stpmgrd (sonic-swss) writes the messages below and stpd reads them as raw
+ * bytes. The assertions at the end of this file fix the size of every
+ * message and the offset and width of every field, so a change that moves a
+ * field fails the build instead of making the receiver misread it. sonic-swss
+ * cfgmgr/stpmgr.cpp checks the same numbers on the sender side. */
+#define STP_IPC_ASSERT_SIZE(type, bytes) \
+    STP_IPC_STATIC_ASSERT(sizeof(type) == (bytes), \
+        #type " changed size; the other side of the stpmgrd/stpd socket expects " #bytes)
+
+#define STP_IPC_ASSERT_FIELD(type, field, off, bytes) \
+    STP_IPC_STATIC_ASSERT(offsetof(type, field) == (off) && sizeof(((type *)0)->field) == (bytes), \
+        #type "." #field " moved or changed width; the other side reads it at offset " #off)
+
 #define STPD_SOCK_NAME "/var/run/stpipc.sock"
 
 #define STP_SYNC_MSTP_NAME_LEN          32
@@ -74,7 +96,7 @@ typedef struct STP_IPC_MSG
     unsigned int msg_len;
     L2_PROTO_MODE proto_mode;
     char data[0];
-} __attribute__((aligned(4))) STP_IPC_MSG;
+} __attribute__((packed)) STP_IPC_MSG;
 
 #define STP_SET_COMMAND 1
 #define STP_DEL_COMMAND 0
@@ -98,7 +120,9 @@ typedef struct PORT_ATTR
     char intf_name[IFNAMSIZ];
     int8_t mode;
     uint8_t enabled;
-} PORT_ATTR;
+    // Add padding to align to 4 bytes
+    uint16_t padding;
+} __attribute__((packed)) PORT_ATTR;
 
 typedef struct STP_VLAN_CONFIG_MSG
 {
@@ -126,11 +150,11 @@ typedef struct STP_VLAN_PORT_CONFIG_MSG
 
 typedef struct VLAN_ATTR
 {
-    int8_t mode;
-    uint8_t padding[3];  // Explicit padding for alignment
     int inst_id;
     int vlan_id;
-} VLAN_ATTR;
+    int8_t mode;
+    uint8_t padding[3];  // Explicit padding for alignment
+} __attribute__((packed)) VLAN_ATTR;
 
 typedef struct STP_PORT_CONFIG_MSG
 {
@@ -138,17 +162,18 @@ typedef struct STP_PORT_CONFIG_MSG
     char intf_name[IFNAMSIZ];
     uint8_t enabled;
     uint8_t root_guard;
+    uint8_t loop_guard;
     uint8_t bpdu_guard;
     uint8_t bpdu_guard_do_disable;
     uint8_t portfast;
     uint8_t uplink_fast;
-    uint8_t edge;
+    uint8_t edge_port;
     LinkType    link_type;          // MSTP only
     int path_cost;
     int priority;
     int count;
     VLAN_ATTR vlan_list[0];
-} STP_PORT_CONFIG_MSG;
+} __attribute__((packed)) STP_PORT_CONFIG_MSG;
 
 typedef struct STP_VLAN_MEM_CONFIG_MSG
 {
@@ -161,7 +186,7 @@ typedef struct STP_VLAN_MEM_CONFIG_MSG
     char intf_name[IFNAMSIZ];
     int path_cost;
     int priority;
-} STP_VLAN_MEM_CONFIG_MSG;
+} __attribute__((packed)) STP_VLAN_MEM_CONFIG_MSG;
 
 typedef struct STP_MST_GLOBAL_CONFIG_MSG {
     uint8_t     opcode; // enable/disable
@@ -170,26 +195,26 @@ typedef struct STP_MST_GLOBAL_CONFIG_MSG {
     uint8_t     forward_delay;
     uint8_t     hello_time;
     uint8_t     max_age;
-    uint8_t     max_hop;
+    uint8_t     max_hops;
 }__attribute__((packed)) STP_MST_GLOBAL_CONFIG_MSG;
 
 
 typedef struct VLAN_LIST{
     uint16_t    vlan_id;
-}VLAN_LIST;
+}__attribute__((packed)) VLAN_LIST;
 
-typedef struct MST_INST_CONFIG_MSG
+typedef struct STP_MST_INST_CONFIG_MSG
 {
     uint8_t     opcode; // enable/disable
     uint16_t    mst_id;
     int         priority;
     uint16_t    vlan_count;
     VLAN_LIST   vlan_list[0];
-} __attribute__((packed))  MST_INST_CONFIG_MSG;
+} __attribute__((packed))  STP_MST_INST_CONFIG_MSG;
 
 typedef struct STP_MST_INSTANCE_CONFIG_MSG {
     uint8_t    mst_count;
-    MST_INST_CONFIG_MSG mst_list[0];
+    STP_MST_INST_CONFIG_MSG  mst_list[0];
 } __attribute__((packed)) STP_MST_INSTANCE_CONFIG_MSG;
 
 typedef struct STP_MST_INST_PORT_CONFIG_MSG {
@@ -204,7 +229,7 @@ typedef struct PORT_LIST
 {
     char        intf_name[IFNAMSIZ];
     int8_t      tagging_mode;
-}PORT_LIST;
+}__attribute__((packed)) PORT_LIST;
 
 typedef struct STP_MST_VLAN_PORT_MAP
 {
@@ -213,7 +238,7 @@ typedef struct STP_MST_VLAN_PORT_MAP
     int8_t      stp_mode;
     uint8_t     add;    
     PORT_LIST   port_list[0];
-}STP_MST_VLAN_PORT_MAP;
+}__attribute__((packed)) STP_MST_VLAN_PORT_MAP;
 
 typedef struct MSTP_INST_VLAN_LIST
 {
@@ -255,5 +280,132 @@ typedef struct STP_CTL_MSG
     STP_DEBUG_OPT dbg;
     int mst_id;
 } __attribute__((packed)) STP_CTL_MSG;
+
+/* Wire layout of the stpmgrd -> stpd messages. Measured from this header,
+ * not counted by hand. */
+/* STP_IPC_MSG */
+STP_IPC_ASSERT_SIZE(STP_IPC_MSG, 12);
+STP_IPC_ASSERT_FIELD(STP_IPC_MSG, msg_type, 0, 4);
+STP_IPC_ASSERT_FIELD(STP_IPC_MSG, msg_len, 4, 4);
+STP_IPC_ASSERT_FIELD(STP_IPC_MSG, proto_mode, 8, 4);
+STP_IPC_ASSERT_FIELD(STP_IPC_MSG, data, 12, 0);
+
+/* STP_INIT_READY_MSG */
+STP_IPC_ASSERT_SIZE(STP_INIT_READY_MSG, 3);
+STP_IPC_ASSERT_FIELD(STP_INIT_READY_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_INIT_READY_MSG, max_stp_instances, 1, 2);
+
+/* STP_BRIDGE_CONFIG_MSG */
+STP_IPC_ASSERT_SIZE(STP_BRIDGE_CONFIG_MSG, 12);
+STP_IPC_ASSERT_FIELD(STP_BRIDGE_CONFIG_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_BRIDGE_CONFIG_MSG, stp_mode, 1, 1);
+STP_IPC_ASSERT_FIELD(STP_BRIDGE_CONFIG_MSG, rootguard_timeout, 2, 4);
+STP_IPC_ASSERT_FIELD(STP_BRIDGE_CONFIG_MSG, base_mac_addr, 6, 6);
+
+/* PORT_ATTR */
+STP_IPC_ASSERT_SIZE(PORT_ATTR, 20);
+STP_IPC_ASSERT_FIELD(PORT_ATTR, intf_name, 0, 16);
+STP_IPC_ASSERT_FIELD(PORT_ATTR, mode, 16, 1);
+STP_IPC_ASSERT_FIELD(PORT_ATTR, enabled, 17, 1);
+
+/* STP_VLAN_CONFIG_MSG */
+STP_IPC_ASSERT_SIZE(STP_VLAN_CONFIG_MSG, 30);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, newInstance, 1, 1);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, vlan_id, 2, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, inst_id, 6, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, forward_delay, 10, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, hello_time, 14, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, max_age, 18, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, priority, 22, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, count, 26, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_CONFIG_MSG, port_list, 30, 0);
+
+/* STP_VLAN_PORT_CONFIG_MSG */
+STP_IPC_ASSERT_SIZE(STP_VLAN_PORT_CONFIG_MSG, 33);
+STP_IPC_ASSERT_FIELD(STP_VLAN_PORT_CONFIG_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_VLAN_PORT_CONFIG_MSG, vlan_id, 1, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_PORT_CONFIG_MSG, intf_name, 5, 16);
+STP_IPC_ASSERT_FIELD(STP_VLAN_PORT_CONFIG_MSG, inst_id, 21, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_PORT_CONFIG_MSG, path_cost, 25, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_PORT_CONFIG_MSG, priority, 29, 4);
+
+/* VLAN_ATTR */
+STP_IPC_ASSERT_SIZE(VLAN_ATTR, 12);
+STP_IPC_ASSERT_FIELD(VLAN_ATTR, inst_id, 0, 4);
+STP_IPC_ASSERT_FIELD(VLAN_ATTR, vlan_id, 4, 4);
+STP_IPC_ASSERT_FIELD(VLAN_ATTR, mode, 8, 1);
+
+/* STP_PORT_CONFIG_MSG */
+STP_IPC_ASSERT_SIZE(STP_PORT_CONFIG_MSG, 41);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, intf_name, 1, 16);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, enabled, 17, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, root_guard, 18, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, loop_guard, 19, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, bpdu_guard, 20, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, bpdu_guard_do_disable, 21, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, portfast, 22, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, uplink_fast, 23, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, edge_port, 24, 1);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, link_type, 25, 4);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, path_cost, 29, 4);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, priority, 33, 4);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, count, 37, 4);
+STP_IPC_ASSERT_FIELD(STP_PORT_CONFIG_MSG, vlan_list, 41, 0);
+
+/* STP_VLAN_MEM_CONFIG_MSG */
+STP_IPC_ASSERT_SIZE(STP_VLAN_MEM_CONFIG_MSG, 36);
+STP_IPC_ASSERT_FIELD(STP_VLAN_MEM_CONFIG_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_VLAN_MEM_CONFIG_MSG, enabled, 1, 1);
+STP_IPC_ASSERT_FIELD(STP_VLAN_MEM_CONFIG_MSG, mode, 2, 1);
+STP_IPC_ASSERT_FIELD(STP_VLAN_MEM_CONFIG_MSG, vlan_id, 4, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_MEM_CONFIG_MSG, inst_id, 8, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_MEM_CONFIG_MSG, intf_name, 12, 16);
+STP_IPC_ASSERT_FIELD(STP_VLAN_MEM_CONFIG_MSG, path_cost, 28, 4);
+STP_IPC_ASSERT_FIELD(STP_VLAN_MEM_CONFIG_MSG, priority, 32, 4);
+
+/* STP_MST_GLOBAL_CONFIG_MSG */
+STP_IPC_ASSERT_SIZE(STP_MST_GLOBAL_CONFIG_MSG, 41);
+STP_IPC_ASSERT_FIELD(STP_MST_GLOBAL_CONFIG_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_MST_GLOBAL_CONFIG_MSG, revision_number, 1, 4);
+STP_IPC_ASSERT_FIELD(STP_MST_GLOBAL_CONFIG_MSG, name, 5, 32);
+STP_IPC_ASSERT_FIELD(STP_MST_GLOBAL_CONFIG_MSG, forward_delay, 37, 1);
+STP_IPC_ASSERT_FIELD(STP_MST_GLOBAL_CONFIG_MSG, hello_time, 38, 1);
+STP_IPC_ASSERT_FIELD(STP_MST_GLOBAL_CONFIG_MSG, max_age, 39, 1);
+STP_IPC_ASSERT_FIELD(STP_MST_GLOBAL_CONFIG_MSG, max_hops, 40, 1);
+
+/* VLAN_LIST */
+STP_IPC_ASSERT_SIZE(VLAN_LIST, 2);
+STP_IPC_ASSERT_FIELD(VLAN_LIST, vlan_id, 0, 2);
+
+/* STP_MST_INST_CONFIG_MSG */
+STP_IPC_ASSERT_SIZE(STP_MST_INST_CONFIG_MSG, 9);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_CONFIG_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_CONFIG_MSG, mst_id, 1, 2);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_CONFIG_MSG, priority, 3, 4);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_CONFIG_MSG, vlan_count, 7, 2);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_CONFIG_MSG, vlan_list, 9, 0);
+
+/* STP_MST_INST_PORT_CONFIG_MSG */
+STP_IPC_ASSERT_SIZE(STP_MST_INST_PORT_CONFIG_MSG, 27);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_PORT_CONFIG_MSG, opcode, 0, 1);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_PORT_CONFIG_MSG, intf_name, 1, 16);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_PORT_CONFIG_MSG, mst_id, 17, 2);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_PORT_CONFIG_MSG, path_cost, 19, 4);
+STP_IPC_ASSERT_FIELD(STP_MST_INST_PORT_CONFIG_MSG, priority, 23, 4);
+
+/* PORT_LIST */
+STP_IPC_ASSERT_SIZE(PORT_LIST, 17);
+STP_IPC_ASSERT_FIELD(PORT_LIST, intf_name, 0, 16);
+STP_IPC_ASSERT_FIELD(PORT_LIST, tagging_mode, 16, 1);
+
+/* STP_MST_VLAN_PORT_MAP */
+STP_IPC_ASSERT_SIZE(STP_MST_VLAN_PORT_MAP, 6);
+STP_IPC_ASSERT_FIELD(STP_MST_VLAN_PORT_MAP, vlan_id, 0, 2);
+STP_IPC_ASSERT_FIELD(STP_MST_VLAN_PORT_MAP, port_count, 2, 2);
+STP_IPC_ASSERT_FIELD(STP_MST_VLAN_PORT_MAP, stp_mode, 4, 1);
+STP_IPC_ASSERT_FIELD(STP_MST_VLAN_PORT_MAP, add, 5, 1);
+STP_IPC_ASSERT_FIELD(STP_MST_VLAN_PORT_MAP, port_list, 6, 0);
 
 #endif
