@@ -1124,9 +1124,8 @@ bool stpmgr_protect_process(PORT_ID rx_port, uint16_t vlan_id)
         {
             STP_SYSLOG("STP: BPDU(%u) received, interface %s disabled due to BPDU guard trigger", vlan_id, stp_intf_get_port_name(rx_port));
         }
-		// Disable rx_port
+		// Ask orchagent to err-disable rx_port. CONFIG_DB is left alone.
         stpsync_update_bpdu_guard_shutdown(stp_intf_get_port_name(rx_port), true);
-	    stpsync_update_port_admin_state(stp_intf_get_port_name(rx_port), false, STP_IS_ETH_PORT_ID(rx_port));
 	}
     else
     {

@@ -261,14 +261,6 @@ void stpsync_update_bpdu_guard_shutdown(char *ifName, bool enabled)
     db().set(stptest::kStpPortTable, ifName);
 }
 
-/* The admin state lives in CONFIG_DB, which the tests do not model. */
-void stpsync_update_port_admin_state(char *ifName, bool up, bool physical)
-{
-    (void)ifName;
-    (void)up;
-    (void)physical;
-}
-
 void stpsync_del_stp_port(char *ifName)
 {
     db().del(stptest::kStpPortTable, ifName);

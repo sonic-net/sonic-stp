@@ -137,8 +137,6 @@ extern void stpsync_update_vlan_port_state(char *ifName, uint16_t vlan_id,
 extern void stpsync_del_vlan_port_state(char *ifName, uint16_t vlan_id);
 extern void stpsync_update_fastage_state(uint16_t vlan_id, bool add);
 extern uint32_t stpsync_get_port_speed(char *ifName);
-extern void stpsync_update_port_admin_state(char *ifName, bool up,
-        bool physical);
 extern void stpsync_update_bpdu_guard_shutdown(char *ifName, bool enabled);
 extern void stpsync_del_stp_port(char *ifName);
 extern void stpsync_update_port_fast(char *ifName, bool enabled);
