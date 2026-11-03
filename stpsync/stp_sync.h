@@ -27,7 +27,7 @@ namespace swss {
 
     class StpSync {
         public:
-            StpSync(DBConnector *db, DBConnector *cfgDb);
+            StpSync(DBConnector *db);
             void addVlanToInstance(uint16_t vlan_id, uint16_t instance);
             void delVlanFromInstance(uint16_t vlan_id, uint16_t instance);
             void updateStpVlanInfo(STP_VLAN_TABLE * stp_vlan);
@@ -39,7 +39,6 @@ namespace swss {
             void updateStpVlanPortState(char * ifName, uint16_t vlan_id, uint8_t state);
             void delStpVlanPortState(char * ifName, uint16_t vlan_id);
             void updateStpVlanFastage(uint16_t vlan_id, bool add);
-            void updatePortAdminState(char * if_name, bool up, bool physical);
             uint32_t getPortSpeed(char * if_name);
             void updateBpduGuardShutdown(char * ifName, bool disabled);
             void delStpInterface(char * ifName);
@@ -64,8 +63,6 @@ namespace swss {
             ProducerStateTable m_stpFastAgeFlushTable;
             ProducerStateTable m_stpInstancePortFlushTable; 
             Table m_appPortTable;
-            Table m_cfgPortTable;
-            Table m_cfgLagTable;
     };
 
 }

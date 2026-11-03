@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <time.h>
 #include <sched.h>
 #include <signal.h>
@@ -27,7 +28,6 @@
 #include <assert.h>
 #include <linux/filter.h>
 #include <linux/if_packet.h>
-#include <openssl/hmac.h>
 #include "stp_debug.h"
 #include "l2.h"
 #include "stp_timer.h"

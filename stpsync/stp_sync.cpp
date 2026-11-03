@@ -30,7 +30,7 @@ using namespace swss;
 
 extern char mstp_role_string[][20];
 
-StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
+StpSync::StpSync(DBConnector *db) :
     m_stpVlanTable(db, APP_STP_VLAN_TABLE_NAME),
     m_stpVlanPortTable(db, APP_STP_VLAN_PORT_TABLE_NAME),
     m_stpVlanInstanceTable(db, APP_STP_VLAN_INSTANCE_TABLE_NAME),
@@ -40,16 +40,13 @@ StpSync::StpSync(DBConnector *db, DBConnector *cfgDb) :
     m_stpMstPortTable(db, APP_STP_MST_PORT_TABLE_NAME),
     m_stpFastAgeFlushTable(db, APP_STP_FASTAGEING_FLUSH_TABLE_NAME),
     m_stpInstancePortFlushTable(db, APP_STP_INST_PORT_FLUSH_TABLE_NAME),
-    m_appPortTable(db, APP_PORT_TABLE_NAME),
-    m_cfgPortTable(cfgDb, CFG_PORT_TABLE_NAME),
-    m_cfgLagTable(cfgDb, CFG_LAG_TABLE_NAME)
+    m_appPortTable(db, APP_PORT_TABLE_NAME)
 {
     SWSS_LOG_NOTICE("STP: sync object");
 }
 
 DBConnector db(APPL_DB, DBConnector::DEFAULT_UNIXSOCKET, 0);
-DBConnector cfgDb(CONFIG_DB, DBConnector::DEFAULT_UNIXSOCKET, 0);
-StpSync stpsync(&db, &cfgDb);
+StpSync stpsync(&db);
 
 extern "C" {
 
@@ -98,11 +95,6 @@ extern "C" {
         stpsync.updateStpVlanFastage(vlan_id, add);
     }
 
-    void stpsync_update_port_admin_state(char * ifName, bool up, bool physical)
-    {
-        stpsync.updatePortAdminState(ifName, up, physical);
-    }
-    
     uint32_t stpsync_get_port_speed(char * ifName)
     {
         return stpsync.getPortSpeed(ifName);
@@ -458,23 +450,6 @@ void StpSync::updateStpVlanFastage(uint16_t vlan_id, bool add)
     SWSS_LOG_NOTICE(" %s VLAN %s fastage", add?"Update":"Delete", vlan.c_str());
 }
 
-void StpSync::updatePortAdminState(char * if_name, bool up, bool physical)
-{
-    std::vector<FieldValueTuple> fvVector;
-    std::string ifName(if_name);
-    std::string key = ifName;
-
-    FieldValueTuple fv("admin_status", (up ? "up" : "down"));
-    fvVector.push_back(fv);
-
-    if(physical)
-        m_cfgPortTable.set(key, fvVector);
-    else
-        m_cfgLagTable.set(key, fvVector);
-
-    SWSS_LOG_NOTICE("STP %s %s port %s", if_name, up?"enable":"disable", physical?"physical":"LAG");
-}
-
 uint32_t StpSync::getPortSpeed(char * if_name)
 {
     vector<FieldValueTuple> fvs;
@@ -495,6 +470,11 @@ uint32_t StpSync::getPortSpeed(char * if_name)
     return speed;
 }
 
+/*
+ * Publishes the BPDU guard err-disable state of a port. StpOrch holds the
+ * port admin-down on "yes" and releases it on "no". The configured admin
+ * state in CONFIG_DB is not touched.
+ */
 void StpSync::updateBpduGuardShutdown(char * if_name, bool enabled)
 {
     std::vector<FieldValueTuple> fvVector;
@@ -540,6 +520,9 @@ void StpSync::clearAllStpAppDbTables(void)
     //m_stpVlanInstanceTable.clear();
     m_stpPortTable.clear();
     //m_stpPortStateTable.clear();
+    // No consumer drains these, so unswept rows outlive the stpd run that wrote them.
+    m_stpMstTable.clear();
+    m_stpMstPortTable.clear();
     m_stpFastAgeFlushTable.clear();
     SWSS_LOG_NOTICE("STP clear all APP DB STP tables");
 }

@@ -559,7 +559,7 @@ int stp_intf_init_po_id_pool()
     INTERFACE_NODE *node = 0;
     
     //Allocate po-id-pool
-    ret = bmp_alloc(&stpd_context.po_id_pool, STP_MAX_PO_ID);
+    ret = bmp_ensure(&stpd_context.po_id_pool, STP_MAX_PO_ID);
     if (-1 == ret)
     {
         STP_LOG_ERR("bmp_alloc Failed");

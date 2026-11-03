@@ -27,15 +27,15 @@ uint16_t g_stp_bmp_po_offset;
 int8_t stpdata_init_global_port_mask()
 {
     int8_t ret = 0;
-    ret |= bmp_alloc(&g_stp_enable_mask, g_max_stp_port);
-    ret |= bmp_alloc(&g_stp_enable_config_mask, g_max_stp_port);
-    ret |= bmp_alloc(&g_fastspan_mask, g_max_stp_port);
-    ret |= bmp_alloc(&g_fastspan_config_mask, g_max_stp_port);
-    ret |= bmp_alloc(&g_fastuplink_mask, g_max_stp_port);
-    ret |= bmp_alloc(&g_stp_protect_mask, g_max_stp_port);
-    ret |= bmp_alloc(&g_stp_protect_do_disable_mask, g_max_stp_port);
-    ret |= bmp_alloc(&g_stp_root_protect_mask, g_max_stp_port);
-    ret |= bmp_alloc(&g_stp_protect_disabled_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_stp_enable_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_stp_enable_config_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_fastspan_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_fastspan_config_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_fastuplink_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_stp_protect_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_stp_protect_do_disable_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_stp_root_protect_mask, g_max_stp_port);
+    ret |= bmp_ensure(&g_stp_protect_disabled_mask, g_max_stp_port);
 
     /* By default fast span is enabled on all ports */
     PORT_MASK_SET_ALL(g_fastspan_mask);
@@ -50,9 +50,9 @@ int8_t stpdata_init_stp_class_port_mask(STP_INDEX stp_index)
     STP_CLASS *stp_class;
 
     stp_class = GET_STP_CLASS(stp_index);
-    ret |= bmp_alloc(&stp_class->enable_mask, g_max_stp_port);
-    ret |= bmp_alloc(&stp_class->control_mask, g_max_stp_port);
-    ret |= bmp_alloc(&stp_class->untag_mask, g_max_stp_port);
+    ret |= bmp_ensure(&stp_class->enable_mask, g_max_stp_port);
+    ret |= bmp_ensure(&stp_class->control_mask, g_max_stp_port);
+    ret |= bmp_ensure(&stp_class->untag_mask, g_max_stp_port);
 
     return ret;
 }
@@ -294,8 +294,8 @@ int stpdata_init_debug_structures(void)
     debugGlobal.stp.all_vlans = 1;
 
 
-    ret |= bmp_alloc(&debugGlobal.stp.vlan_mask, MAX_VLAN_ID);
-    ret |= bmp_alloc(&debugGlobal.stp.port_mask, g_max_stp_port);
+    ret |= bmp_ensure(&debugGlobal.stp.vlan_mask, MAX_VLAN_ID);
+    ret |= bmp_ensure(&debugGlobal.stp.port_mask, g_max_stp_port);
     if (ret != 0)
     {
         STP_LOG_ERR("bmp_alloc Failed");

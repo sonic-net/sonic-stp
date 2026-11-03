@@ -4,6 +4,7 @@
  */
 
 #include "stp_inc.h"
+#include "mstp_md5.h"
 
 extern UINT8 g_stp_base_mac[L2_ETH_ADD_LEN];
 
@@ -258,27 +259,14 @@ void mstputil_compute_message_digest(bool print)
 {
 	MSTP_BRIDGE *mstp_bridge = mstpdata_get_bridge();
 	UINT8 key[16] = MSTP_CONFIG_DIGEST_SIGNATURE_KEY;
-	int md_len = 0; 
-	unsigned char *md5_ptr = NULL; 
 
-	memset(mstp_bridge->mstConfigId.config_digest,
-		0, sizeof(mstp_bridge->mstConfigId.config_digest));
+	/* HMAC-MD5 with the 802.1Q key (13.7), computed by the daemon's own MD5
+	 * so the bytes do not depend on which crypto provider the image enables. */
+	mstp_hmac_md5(key, sizeof(key),
+		(const UINT8 *) &mstp_bridge->mstid_table, sizeof(mstp_bridge->mstid_table),
+		mstp_bridge->mstConfigId.config_digest);
 
-	/* PKCS11 HMAC_CALC function */
-	md5_ptr = HMAC(EVP_md5(), key, sizeof(key),
-			(unsigned char *) &mstp_bridge->mstid_table, sizeof(mstp_bridge->mstid_table),
-			mstp_bridge->mstConfigId.config_digest, &md_len);
-	if (md5_ptr == NULL) 
-	{ 
-		STP_LOG_ERR("MD5 calculation Error in HMAC"); 
-		return;   
-	} 
-	if (md_len != MD5_DIGEST_LENGTH) 
-		STP_LOG_ERR("MD5 digest len : %d != 16",md_len); 
-	else 
-		STP_LOG_DEBUG("MD5 : 0x%s", md5_ptr); 
-	
-    if (print)
+	if (print)
 	{
 		mstpdebug_print_config_digest(mstp_bridge->mstConfigId.config_digest);
 	}
@@ -915,10 +903,11 @@ bool mstputil_set_kernel_bridge_port_state_for_single_vlan(VLAN_ID vlan_id, PORT
 
     untag_vlan = mstpdata_get_untag_vlan_for_port(port_number);
 
+    /* The untagged VLAN is also the PVID; without it untagged frames are dropped. */
     if(state == FORWARDING) 
     {
         snprintf(cmd_buff, 100, "/sbin/bridge vlan add vid %u dev %s %s", vlan_id, 
-            stp_intf_get_port_name(port_number), ((vlan_id == untag_vlan)?"untagged":"tagged"));
+            stp_intf_get_port_name(port_number), ((vlan_id == untag_vlan)?"pvid untagged":"tagged"));
         ret = system(cmd_buff);
         if(ret == -1)
         {
@@ -984,13 +973,14 @@ bool mstputil_set_kernel_bridge_port_state(MSTP_INDEX mstp_index, PORT_ID port_n
         copy_mask((BITMAP_T *)&vlanmask, mstp_vlanmask);
     }
 
+    /* The untagged VLAN is also the PVID; without it untagged frames are dropped. */
     if(state == FORWARDING)  
     {
         vlan_id = vlanmask_get_first_vlan(&vlanmask);
         while (vlan_id != VLAN_ID_INVALID)
         {
             snprintf(cmd_buff, 100, "/sbin/bridge vlan add vid %u dev %s %s", vlan_id, 
-                stp_intf_get_port_name(port_number), ((vlan_id == untag_vlan)?"untagged":"tagged"));
+                stp_intf_get_port_name(port_number), ((vlan_id == untag_vlan)?"pvid untagged":"tagged"));
             ret = system(cmd_buff);
             if(ret == -1)
             {
@@ -1193,9 +1183,18 @@ static void mstptimer_update(MSTP_INDEX mstp_index, PORT_ID port_number)
             SET_BIT(cport->modified_fields, MSTP_PORT_MEMBER_REM_TIME_BIT);
         }
     }
-    
-    mstp_flush(mstp_index, port_number);
-   
+
+    /* Retry a flush the topology change machine asked for but could not
+     * complete. fdbFlush stays set until mstp_flush() succeeds, so a converged
+     * port with nothing pending never flushes. An edge port drops it, as the
+     * topology change machine does: its hosts did not move. */
+    if (cport->fdbFlush)
+    {
+        if (mstp_port->operEdge || mstp_flush(mstp_index, port_number))
+        {
+            cport->fdbFlush = false;
+        }
+    }
 }
 
 /*****************************************************************************/
@@ -1942,6 +1941,51 @@ void mstputil_sync_mst_port(MSTP_INDEX mstp_index, PORT_ID port_number)
 }
 
 /*****************************************************************************/
+/* mstputil_unpublished_fields: bits whose values stpsync would have skipped, */
+/* because the field still holds its empty or sentinel value. Only the fields */
+/* an instance of this kind writes count: an MSTI carries its regional root  */
+/* in root_bridge_id and has no external root, internal cost, timers or hold */
+/* count of its own, and an empty VLAN list is a value, not a gap.           */
+/*****************************************************************************/
+static UINT32 mstputil_unpublished_fields(MSTP_INDEX mstp_index, STP_MST_TABLE *stp_mst_table)
+{
+    UINT32 pending = 0;
+
+    if (stp_mst_table->bridge_id[0] == '\0')
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_BRIDGE_ID_BIT);
+    if (stp_mst_table->root_port[0] == '\0')
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_ROOT_PORT_BIT);
+    if (stp_mst_table->root_path_cost == 0xFFFFFFFF)
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_ROOT_PATH_COST_BIT);
+    if (stp_mst_table->rem_hops == 0xFF)
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_REM_HOPS_BIT);
+
+    if (!MSTP_IS_CIST_INDEX(mstp_index))
+    {
+        if (stp_mst_table->root_bridge_id[0] == '\0')
+            SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_REG_ROOT_ID_BIT);
+        return pending;
+    }
+
+    if (stp_mst_table->root_bridge_id[0] == '\0')
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_ROOT_ID_BIT);
+    if (stp_mst_table->reg_root_bridge_id[0] == '\0')
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_REG_ROOT_ID_BIT);
+    if (stp_mst_table->in_root_path_cost == 0xFFFFFFFF)
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_IN_ROOT_PATH_COST_BIT);
+    if (stp_mst_table->root_hello_time == 0)
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_HELLO_TIME_BIT);
+    if (stp_mst_table->root_forward_delay == 0)
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_FWD_DELAY_BIT);
+    if (stp_mst_table->root_max_age == 0)
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_MAX_AGE_BIT);
+    if (stp_mst_table->tx_hold_count == 0)
+        SET_BIT(pending, MSTP_BRIDGE_DATA_MEMBER_TX_HOLD_COUNT_BIT);
+
+    return pending;
+}
+
+/*****************************************************************************/
 /* mstputil_sync_mst_instance: sync mst instance  info to APP DB             */
 /*****************************************************************************/
 void mstputil_sync_mst_instance(MSTP_INDEX mstp_index)
@@ -2050,7 +2094,9 @@ void mstputil_sync_mst_instance(MSTP_INDEX mstp_index)
                 }
             }
 
-            cist_bridge->modified_fields = 0;
+            /* Keep never-published fields dirty so they reach APP DB later. */
+            cist_bridge->initial_sync_pending_bitmap &= mstputil_unpublished_fields(mstp_index, &stp_mst_table);
+            cist_bridge->modified_fields = cist_bridge->initial_sync_pending_bitmap;
 
             stpsync_update_mst_info(&stp_mst_table);
         }
@@ -2118,7 +2164,8 @@ void mstputil_sync_mst_instance(MSTP_INDEX mstp_index)
 
             }
 
-            msti_bridge->modified_fields = 0;
+            msti_bridge->initial_sync_pending_bitmap &= mstputil_unpublished_fields(mstp_index, &stp_mst_table);
+            msti_bridge->modified_fields = msti_bridge->initial_sync_pending_bitmap;
             stpsync_update_mst_info(&stp_mst_table);
         }
 

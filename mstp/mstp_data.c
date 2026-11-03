@@ -70,6 +70,12 @@ static MSTP_MSTI_BRIDGE * mstpdata_alloc_msti_bridge(MSTP_INDEX mstp_index)
 	{
         STP_LOG_DEBUG("[MST Index %d] Memory allocated",mstp_index);	
 		msti_bridge = (MSTP_MSTI_BRIDGE *) calloc(1,sizeof(MSTP_MSTI_BRIDGE));
+		if (msti_bridge)
+		{
+			/* Every field is still to be published. The init that follows
+			 * sets modified_fields itself. */
+			msti_bridge->initial_sync_pending_bitmap = MSTP_BRIDGE_DATA_MEMBER_ALL_BITS;
+		}
 		mstp_bridge->msti[mstp_index] = msti_bridge;
 	}
 	else
@@ -215,17 +221,23 @@ MSTP_BRIDGE * mstpdata_alloc_mstp_bridge()
             STP_LOG_CRITICAL("Calloc failed");
             return NULL;
         }
+        mstp_global->bridge->cist.initial_sync_pending_bitmap = MSTP_BRIDGE_DATA_MEMBER_ALL_BITS;
     }
 
-    ret = bmp_alloc(&mstp_global->bridge->control_mask, g_max_stp_port);
-    ret |= bmp_alloc(&mstp_global->bridge->enable_mask, g_max_stp_port);
-    ret |= bmp_alloc(&mstp_global->bridge->admin_disable_mask, g_max_stp_port);
-    ret |= bmp_alloc(&mstp_global->bridge->admin_pt2pt_mask, g_max_stp_port);
-    ret |= bmp_alloc(&mstp_global->bridge->admin_edge_mask, g_max_stp_port);
+    /* Allocate only the masks that do not exist yet. bmp_alloc() overwrites
+     * the pointer it is given, so re-running it on a bridge that is already
+     * allocated replaces every mask with an empty one and leaks the old. The
+     * masks hold which ports are enrolled, so any port configured before this
+     * runs again is dropped. */
+    ret  = bmp_ensure(&mstp_global->bridge->control_mask, g_max_stp_port);
+    ret |= bmp_ensure(&mstp_global->bridge->enable_mask, g_max_stp_port);
+    ret |= bmp_ensure(&mstp_global->bridge->admin_disable_mask, g_max_stp_port);
+    ret |= bmp_ensure(&mstp_global->bridge->admin_pt2pt_mask, g_max_stp_port);
+    ret |= bmp_ensure(&mstp_global->bridge->admin_edge_mask, g_max_stp_port);
 
     for (i = 0; i<MSTP_MAX_INSTANCES_PER_REGION+1; i++)
     {
-        ret |= bmp_alloc(&mstp_global->bridge->config_mask[i], g_max_stp_port);
+        ret |= bmp_ensure(&mstp_global->bridge->config_mask[i], g_max_stp_port);
     }
 
     if (ret != 0)
@@ -485,7 +497,8 @@ void mstpdata_vlan_port_db_init()
 
     for(vlan_id = 1; vlan_id < MAX_VLAN_ID; vlan_id++)
     {
-        ret = bmp_alloc(&g_mstp_vlan_port_db[vlan_id].port_mask, g_max_stp_port);
+        /* Runs again when stpmgrd restarts and repeats its init. */
+        ret = bmp_ensure(&g_mstp_vlan_port_db[vlan_id].port_mask, g_max_stp_port);
         if (ret != 0)
         {
             STP_LOG_CRITICAL("BMP alloc failed");
