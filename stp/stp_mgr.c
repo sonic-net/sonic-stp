@@ -1352,6 +1352,14 @@ void stpmgr_rx_stp_bpdu(uint16_t vlan_id, uint32_t port_id, char *pkt)
     STP_CONFIG_BPDU			*bpdu = NULL;
     bool 				    flag = true;
 
+    if ( vlan_id == 0 )
+    {
+        // On some systems we get a '0' vlan instead of '1' for an
+        // untagged packet. Since the implementation expects vlan
+        // '1' change vlan '0' to '1' here.
+        vlan_id = 1;
+    }
+
     // check for stp protect configuration.
     if (stpmgr_protect_process(port_id, vlan_id))
     {
@@ -1381,7 +1389,7 @@ void stpmgr_rx_stp_bpdu(uint16_t vlan_id, uint32_t port_id, char *pkt)
     //
     // If vlan_id is NULL and port is untagged on untagged vlan 1 then
     // set vlan_id as 1
-    if (vlan_id == 0 && stputil_is_port_untag(1, port_id))
+    if (stputil_is_port_untag(vlan_id, port_id))
     {
         vlan_id = 1;
     }
@@ -1447,7 +1455,7 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
         if ( bpdu->type != TCN_BPDU_TYPE ) {
             vlan_id = ntohs(bpdu->vlan_id);
         } else {
-             vlan_id = stputil_get_untag_vlan(port_id);
+            vlan_id = stputil_get_untag_vlan(port_id);
         }
 
         if ( !IS_VALID_VLAN( vlan_id ) ) {

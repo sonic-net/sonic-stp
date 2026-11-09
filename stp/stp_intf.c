@@ -490,14 +490,9 @@ void stp_intf_netlink_cb(netlink_db_t *if_db, uint8_t is_add, bool init_in_prog)
     } else if ( STP_IS_PO_PORT( if_db->ifname ) ) {
          eth_if = false;
     } else {
-        // If it is delete then if_db->ifname can be NULL since the
-        // delete path relies on if_db->kif_index. For add we need to
-        // have if_db->ifname
-        if ( is_add ) {
-            STP_LOG_ERR( "Interface '%s' neither port nor portchannel",
-                         if_db->ifname );
-           return;
-        }
+        STP_LOG_ERR( "Interface '%s' neither port nor portchannel if-name %s",
+                     ( if_db->ifname ? if_db->ifname : "invalid" ) );
+        return;
     }
 
     node = stp_intf_update_intf_db(if_db, is_add, init_in_prog, eth_if);

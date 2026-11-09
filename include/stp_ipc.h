@@ -98,8 +98,6 @@ typedef struct PORT_ATTR
     char intf_name[IFNAMSIZ];
     int8_t mode;
     uint8_t enabled;
-    // Add padding to align to 4 bytes
-    uint16_t padding;
 } __attribute__((packed)) PORT_ATTR;
 
 typedef struct STP_VLAN_CONFIG_MSG
@@ -131,7 +129,6 @@ typedef struct VLAN_ATTR
     int inst_id;
     int vlan_id;
     int8_t mode;
-    uint8_t padding[3];  // Explicit padding for alignment
 } __attribute__((packed)) VLAN_ATTR;
 
 typedef struct STP_PORT_CONFIG_MSG
@@ -158,7 +155,6 @@ typedef struct STP_VLAN_MEM_CONFIG_MSG
     uint8_t opcode; // enable/disable
     uint8_t enabled;
     int8_t mode;
-    uint8_t padding;  // Explicit padding for alignment
     int vlan_id;
     int inst_id;
     char intf_name[IFNAMSIZ];
@@ -175,7 +171,6 @@ typedef struct STP_MST_GLOBAL_CONFIG_MSG {
     uint8_t     max_age;
     uint8_t     max_hops;
 }__attribute__((packed)) STP_MST_GLOBAL_CONFIG_MSG;
-
 
 typedef struct VLAN_LIST{
     uint16_t    vlan_id;
