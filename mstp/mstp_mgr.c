@@ -2211,7 +2211,7 @@ void mstpmgr_process_intf_config_msg(void *msg)
             "do_dis:%d, cost:%d, pri:%d, edge:%d, count:%d",
             pmsg->intf_name, pmsg->opcode, pmsg->enabled, pmsg->root_guard, pmsg->bpdu_guard,
             pmsg->bpdu_guard_do_disable, pmsg->path_cost, pmsg->priority,
-            pmsg->edge, pmsg->count);
+            pmsg->edge_port, pmsg->count);
 
 
     port_id = stp_intf_get_port_id_by_name(pmsg->intf_name);
@@ -2286,7 +2286,7 @@ void mstpmgr_process_intf_config_msg(void *msg)
         {
             mstpmgr_add_control_port(port_id);
 
-            mstpmgr_config_port_admin_edge(port_id, pmsg->edge);
+            mstpmgr_config_port_admin_edge(port_id, pmsg->edge_port);
 
             mstpmgr_config_root_protect(port_id, pmsg->root_guard);
 
@@ -2520,8 +2520,8 @@ void mstpmgr_process_mstp_global_config_msg(void *msg)
         else
             mstpmgr_config_max_age(MSTP_DFLT_MAX_AGE);  
 
-        if(pmsg->max_hop)
-            mstpmgr_config_max_hops(pmsg->max_hop);
+        if(pmsg->max_hops)
+            mstpmgr_config_max_hops(pmsg->max_hops);
         else
             mstpmgr_config_max_hops(MSTP_DFLT_MAX_HOPS);
     }
@@ -2545,7 +2545,7 @@ void mstpmgr_process_mstp_global_config_msg(void *msg)
         if(!pmsg->max_age)
             mstpmgr_config_max_age(MSTP_DFLT_MAX_AGE);
 
-        if(!pmsg->max_hop)
+        if(!pmsg->max_hops)
             mstpmgr_config_max_hops(MSTP_DFLT_MAX_HOPS);
 
     }
@@ -2566,7 +2566,7 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
     PORT_MASK *mem_port_mask;
     PORT_MASK  *cist_port_mask = portmask_local_init(&cist_mask);
     PORT_MASK  *msti_port_mask = portmask_local_init(&msti_mask);
-    MST_INST_CONFIG_MSG *mst_list;
+    STP_MST_INST_CONFIG_MSG *mst_list;
     MSTP_MSTID  mst_id;
     VLAN_ID   vlan_id = VLAN_ID_INVALID;
     UINT8 vlanmask_string[500] = {0,};
@@ -2598,7 +2598,7 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
         {
             mstpmgr_config_cist_priority(mst_list->priority);
 
-            mst_list = (MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(MST_INST_CONFIG_MSG)));
+            mst_list = (STP_MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(STP_MST_INST_CONFIG_MSG)));
             continue;
         }
         else
@@ -2607,7 +2607,7 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
              * Ignore it, will update priority once the instance to vlan mapping comes */
             if(mst_list->opcode == STP_SET_COMMAND && mst_list->vlan_count == 0)
             {
-                mst_list = (MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(MST_INST_CONFIG_MSG)));
+                mst_list = (STP_MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(STP_MST_INST_CONFIG_MSG)));
                 continue;
             }
         }
@@ -2813,7 +2813,7 @@ void mstpmgr_process_inst_vlan_config_msg(void *msg)
             }
         }
 
-        mst_list = (MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(MST_INST_CONFIG_MSG)) + (mst_list->vlan_count * sizeof(VLAN_LIST)));
+        mst_list = (STP_MST_INST_CONFIG_MSG *)((char *)mst_list  + (sizeof(STP_MST_INST_CONFIG_MSG)) + (mst_list->vlan_count * sizeof(VLAN_LIST)));
     }
    
     if(restart)

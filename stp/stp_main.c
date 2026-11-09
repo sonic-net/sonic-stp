@@ -27,7 +27,7 @@ int stpd_ipc_init()
 
     unlink(STPD_SOCK_NAME);
     g_stpd_ipc_handle = socket(AF_UNIX, SOCK_DGRAM, 0);
-    if (!g_stpd_ipc_handle)
+    if (g_stpd_ipc_handle == -1 )
     {
         STP_LOG_ERR("ipc socket error %s", strerror(errno));
         return -1;
@@ -62,6 +62,7 @@ int stpd_ipc_init()
 void stpd_log_init()
 {
     STP_LOG_INIT();
+
     if (fopen("/stpd_dbg_reload", "r"))
     {
         STP_LOG_SET_LEVEL(STP_LOG_LEVEL_DEBUG);
@@ -78,7 +79,6 @@ int stpd_main()
     struct event   *evtimer_100ms = 0;
     struct event   *evpkt = 0;
     struct event_config *cfg = 0;
-    int8_t ret = 0;
 
     signal(SIGPIPE, SIG_IGN);
 
