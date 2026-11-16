@@ -62,7 +62,16 @@ static bool mstpmgr_init_mstp_bridge(UINT16 max_instances)
 
     cist_bridge->co.rootPortId = MSTP_INVALID_PORT;
     vlan_bmp_init(&cist_bridge->co.vlanmask);
-    bmp_alloc(&cist_bridge->co.portmask, g_max_stp_port);
+    if (cist_bridge->co.portmask)
+    {
+        bmp_free(cist_bridge->co.portmask);
+        cist_bridge->co.portmask = NULL;
+    }
+    if (bmp_alloc(&cist_bridge->co.portmask, g_max_stp_port) != 0)
+    {
+        STP_LOG_ERR("bmp_alloc failed for CIST portmask");
+        return false;
+    }
 
     cist_bridge->bridgePriority.root = cist_bridge->co.bridgeIdentifier;
     cist_bridge->bridgePriority.extPathCost = 0;
@@ -124,9 +133,15 @@ static void mstpmgr_init_debug()
     ret |= bmp_alloc(&debugGlobal.mstp.port_mask, g_max_stp_port);
     if (ret != 0)
     {
-        if(debugGlobal.mstp.instance_mask)
+        if (debugGlobal.mstp.instance_mask)
         {
             bmp_free(debugGlobal.mstp.instance_mask);
+            debugGlobal.mstp.instance_mask = NULL;
+        }
+        if (debugGlobal.mstp.port_mask)
+        {
+            bmp_free(debugGlobal.mstp.port_mask);
+            debugGlobal.mstp.port_mask = NULL;
         }
         STP_LOG_ERR("bmp_alloc Failed");
         return;
@@ -348,7 +363,18 @@ static bool mstpmgr_init_msti(MSTP_MSTID mstid)
 
     msti_bridge->co.rootPortId = MSTP_INVALID_PORT;
     vlan_bmp_init(&msti_bridge->co.vlanmask);
-    bmp_alloc(&msti_bridge->co.portmask, g_max_stp_port);
+    if (msti_bridge->co.portmask)
+    {
+        bmp_free(msti_bridge->co.portmask);
+        msti_bridge->co.portmask = NULL;
+    }
+    if (bmp_alloc(&msti_bridge->co.portmask, g_max_stp_port) != 0)
+    {
+        STP_LOG_ERR("[Mst %d] bmp_alloc failed for MSTI portmask", mstid);
+        MSTP_SET_INSTANCE_INDEX(mstp_bridge, mstid, MSTP_INDEX_INVALID);
+        g_mstp_global.free_instances++;
+        return false;
+    }
 
     msti_bridge->bridgePriority.designatedId =
         msti_bridge->bridgePriority.regionalRoot = msti_bridge->co.bridgeIdentifier;
