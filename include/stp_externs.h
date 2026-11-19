@@ -105,6 +105,7 @@ extern bool stpmgr_config_root_protect(PORT_ID port_id, bool enable);
 /* stp_util.c */
 extern bool stputil_is_protocol_enabled(L2_PROTO_MODE proto_mode);
 extern bool stputil_is_port_untag(VLAN_ID vlan_id, PORT_ID port_id);
+extern VLAN_ID stputil_get_untag_vlan(PORT_ID port_id);
 extern void stputil_bridge_to_string(BRIDGE_IDENTIFIER *bridge_id, UINT8 *buffer, UINT16 size);
 extern UINT32 stputil_get_default_path_cost(PORT_ID port_number, bool extend);
 extern UINT32 stputil_get_path_cost(STP_PORT_SPEED port_speed, bool extend);

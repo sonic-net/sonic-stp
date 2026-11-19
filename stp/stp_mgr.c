@@ -790,14 +790,19 @@ bool stpmgr_add_control_port(STP_INDEX stp_index, PORT_ID port_number, uint8_t m
 		return false;
 	}
 
+	// Update the tagging before the control_mask check below, because a port
+	// already under control can still change mode. untag_mask decides whether
+	// each BPDU is tagged, so a stale bit puts the wrong header on the wire.
+	if (mode == 0) // UnTagged mode
+		set_mask_bit(stp_class->untag_mask, port_number);
+	else
+		clear_mask_bit(stp_class->untag_mask, port_number);
+
 	// filter out ports that are already part of the control mask
 	if (is_member(stp_class->control_mask, port_number))
 		return true;
 
 	set_mask_bit(stp_class->control_mask, port_number);
-
-    if (mode == 0) // UnTagged mode
-    	set_mask_bit(stp_class->untag_mask, port_number);
 
 	stpmgr_initialize_control_port(stp_class, port_number);
 
@@ -1509,6 +1514,12 @@ void stpmgr_rx_pvst_bpdu(uint16_t vlan_id, uint32_t port_id, void *pkt)
 
 void stpmgr_process_rx_bpdu(uint16_t vlan_id, uint32_t port_id, unsigned char *pkt)
 {
+    // An untagged frame carries no VLAN, so attribute it to the VLAN that
+    // holds this port as an untagged member. The transmit path resolves the
+    // same way; without this a BPDU sent untagged cannot be received.
+    if (!IS_VALID_VLAN(vlan_id))
+        vlan_id = stputil_get_untag_vlan(port_id);
+
     // sanity checks
     if (!IS_VALID_VLAN(vlan_id))
     {
@@ -1578,6 +1589,11 @@ static void stpmgr_process_bridge_config_msg(void *msg)
 
         clear_mask(g_stp_enable_mask);
         stp_intf_reset_port_params();
+
+        // The CLI no longer wipes CONFIG_DB port rows on a global disable,
+        // so no per-port DELs arrive; drop all protocol state from APPL_DB
+        // here, as startup does.
+        stpsync_clear_appdb_stp_tables();
     }
 }
 
@@ -1863,6 +1879,11 @@ static void stpmgr_process_vlan_mem_config_msg(void *msg)
         else
         {
         	stpsync_del_port_state(pmsg->intf_name, pmsg->inst_id);
+            /* The port is not in this instance's control mask, so the usual
+            * STP_VLAN_PORT_TABLE cleanup path is skipped and the row can be
+            * left orphaned in APP_DB. Mirror the delete in the if-branch.
+            */
+            stpsync_del_port_class(pmsg->intf_name, pmsg->vlan_id);
         }
     }
 }

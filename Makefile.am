@@ -28,3 +28,28 @@ stpd_LDADD = -lhiredis -lswsscommon -lcrypto \
 			 -lcrypto \
 	         -levent \
 			 $(COV_LDFLAGS)
+
+# Unit tests. check_PROGRAMS is only built by `make check', so a normal
+# build is unaffected; dh_auto_test picks them up on a package build.
+# They link the real stp/mstp objects against an in-memory model of
+# APPL_DB instead of stpsync/stp_sync.cpp.
+if GTEST
+check_PROGRAMS = stp_tests
+TESTS = stp_tests
+
+stp_tests_SOURCES = tests/stpd_driver.c tests/fake_kernel.c \
+                    tests/fake_appdb.cpp tests/test_bridge_disable.cpp \
+                    tests/test_bpdu_tagging.cpp tests/test_bpdu_rx.cpp \
+                    tests/test_kernel_vlan.cpp tests/test_path_cost.cpp
+
+stp_tests_CPPFLAGS = -I $(top_srcdir) -I ./include -I lib -I tests
+stp_tests_CFLAGS = -Wall -Wno-error=address-of-packed-member
+stp_tests_CXXFLAGS = -std=c++17 -Wall
+
+# tests/fake_kernel.c stands in for both of these.
+stp_tests_LDFLAGS = -Wl,--wrap=system -Wl,--wrap=stp_pkt_sock_create
+
+stp_tests_LDADD = libstp.a \
+                  lib/libcommonstp.a \
+                  -levent -lcrypto -lgtest -lgtest_main -lpthread
+endif

@@ -17,11 +17,15 @@
 
 #include <iostream>
 
-extern "C" void stpd_main();
+extern "C" int stpd_main();
 
 int main(int argc, char **argv)
 {
-    stpd_main();
-    return 0;
+    /* stpd_main() returns -1 when it cannot set itself up (IPC socket,
+     * netlink, packet socket, event loop). Exit non-zero then, so
+     * supervisord sees an unexpected exit and the container's listener
+     * restarts it, instead of a clean exit that leaves ports forwarding
+     * with no protocol daemon. */
+    return (stpd_main() == 0) ? 0 : 1;
 }
 

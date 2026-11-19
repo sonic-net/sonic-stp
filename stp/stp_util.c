@@ -70,43 +70,54 @@ UINT32 stputil_get_default_path_cost(PORT_ID port_number, bool extend)
     return path_cost;
 }
 
+/* FUNCTION
+ *	stputil_get_path_cost()
+ *
+ * SYNOPSIS
+ *	returns the default path cost for a port speed given in Mbps. extend
+ *	mode uses the 802.1t formula 20,000,000,000 / speed in Kbps, so every
+ *	speed gets a cost, including breakout sub-ports such as 20G, 50G and
+ *	200G. legacy mode uses the 802.1D-1998 table, with the entry of the
+ *	nearest lower speed for speeds between two entries. returns 0 only
+ *	when the speed is unknown.
+ */
 UINT32 stputil_get_path_cost(STP_PORT_SPEED port_speed, bool extend)
 {
-	switch (port_speed)
-	{
-		case STP_SPEED_10M:
-			return ((extend) ? STP_PORT_PATH_COST_10M : STP_LEGACY_PORT_PATH_COST_10M);
+    UINT32 speed_mbps = (UINT32) port_speed;
+    UINT32 path_cost;
 
-		case STP_SPEED_100M:
-			return ((extend) ? STP_PORT_PATH_COST_100M : STP_LEGACY_PORT_PATH_COST_100M);
+    if (speed_mbps == 0)
+    {
+        STP_LOG_ERR("unknown port speed %d", port_speed);
+        return 0; /* error */
+    }
 
-		case STP_SPEED_1G:
-			return ((extend) ? STP_PORT_PATH_COST_1G : STP_LEGACY_PORT_PATH_COST_1G);
+    if (extend)
+    {
+        path_cost = STP_PORT_PATH_COST_1M / speed_mbps;
+        if (path_cost < STP_MIN_PORT_PATH_COST)
+            path_cost = STP_MIN_PORT_PATH_COST;
+        else if (path_cost > STP_MAX_PORT_PATH_COST)
+            path_cost = STP_MAX_PORT_PATH_COST;
+        return path_cost;
+    }
 
-		case STP_SPEED_10G:
-			return ((extend) ? STP_PORT_PATH_COST_10G : STP_LEGACY_PORT_PATH_COST_10G);
+    if (speed_mbps >= STP_SPEED_25G)
+        return STP_LEGACY_PORT_PATH_COST_25G;
+    if (speed_mbps >= STP_SPEED_10G)
+        return STP_LEGACY_PORT_PATH_COST_10G;
+    if (speed_mbps >= STP_SPEED_1G)
+        return STP_LEGACY_PORT_PATH_COST_1G;
+    if (speed_mbps >= STP_SPEED_100M)
+        return STP_LEGACY_PORT_PATH_COST_100M;
+    if (speed_mbps >= STP_SPEED_10M)
+        return STP_LEGACY_PORT_PATH_COST_10M;
 
-		case STP_SPEED_25G:
-			return ((extend) ? STP_PORT_PATH_COST_25G : STP_LEGACY_PORT_PATH_COST_25G);
-			
-		case STP_SPEED_40G:
-			return ((extend) ? STP_PORT_PATH_COST_40G : STP_LEGACY_PORT_PATH_COST_40G);
-			
-		case STP_SPEED_100G:
-			return ((extend) ? STP_PORT_PATH_COST_100G: STP_LEGACY_PORT_PATH_COST_100G);
-		
-		case STP_SPEED_400G:
-			return ((extend) ? STP_PORT_PATH_COST_400G: STP_LEGACY_PORT_PATH_COST_400G);
-
-		case STP_SPEED_800G:
-			return ((extend) ? STP_PORT_PATH_COST_800G: STP_LEGACY_PORT_PATH_COST_800G);
-
-        default:
-            break;
-	}
-
-	STP_LOG_ERR("unknown port speed %d", port_speed);
-	return 0; /* error */
+    /* 802.1D-1998 table 8-5 is 1000 / speed in Mbps below 10M. */
+    path_cost = 1000 / speed_mbps;
+    if (path_cost > STP_LEGACY_MAX_PORT_PATH_COST)
+        path_cost = STP_LEGACY_MAX_PORT_PATH_COST;
+    return path_cost;
 }
 
 /* FUNCTION
@@ -147,8 +158,9 @@ bool stputil_set_kernel_bridge_port_state(STP_CLASS * stp_class, STP_PORT_CLASS 
     char * if_name = GET_STP_PORT_IFNAME(stp_port_class);
     char * tagged;
 
+    /* The untagged VLAN is also the PVID; without it untagged frames are dropped. */
     if(is_member(stp_class->untag_mask, stp_port_class->port_id.number))
-        tagged = "untagged";
+        tagged = "pvid untagged";
     else
         tagged = "tagged";
 
