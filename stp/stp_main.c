@@ -99,6 +99,7 @@ int stpd_main()
     STP_LOG_INFO("LIBEVENT VER : 0x%x", event_get_version_number());
     event_config_set_max_dispatch_interval(cfg, &msec_50/*max_interval*/, 5/*max_callbacks*/, 1/*min-prio*/);
     g_stpd_evbase = event_base_new_with_config(cfg);
+    event_config_free(cfg);
     if (g_stpd_evbase == NULL)
     {
         STP_LOG_ERR("eventbase create Failed ");
