@@ -273,10 +273,26 @@ void mstputil_compute_message_digest(bool print)
 		STP_LOG_ERR("MD5 calculation Error in HMAC"); 
 		return;   
 	} 
-	if (md_len != MD5_DIGEST_LENGTH) 
-		STP_LOG_ERR("MD5 digest len : %d != 16",md_len); 
-	else 
-		STP_LOG_DEBUG("MD5 : 0x%s", md5_ptr); 
+	if (md_len != MD5_DIGEST_LENGTH)
+		STP_LOG_ERR("MD5 digest len : %d != 16",md_len);
+	else
+		STP_LOG_DEBUG("MD5 : 0x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+			mstp_bridge->mstConfigId.config_digest[0],
+			mstp_bridge->mstConfigId.config_digest[1],
+			mstp_bridge->mstConfigId.config_digest[2],
+			mstp_bridge->mstConfigId.config_digest[3],
+			mstp_bridge->mstConfigId.config_digest[4],
+			mstp_bridge->mstConfigId.config_digest[5],
+			mstp_bridge->mstConfigId.config_digest[6],
+			mstp_bridge->mstConfigId.config_digest[7],
+			mstp_bridge->mstConfigId.config_digest[8],
+			mstp_bridge->mstConfigId.config_digest[9],
+			mstp_bridge->mstConfigId.config_digest[10],
+			mstp_bridge->mstConfigId.config_digest[11],
+			mstp_bridge->mstConfigId.config_digest[12],
+			mstp_bridge->mstConfigId.config_digest[13],
+			mstp_bridge->mstConfigId.config_digest[14],
+			mstp_bridge->mstConfigId.config_digest[15]);
 	
     if (print)
 	{

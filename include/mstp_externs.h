@@ -230,6 +230,8 @@ extern void mstpmgr_reset_bpdu_guard_active(PORT_ID port_id);
 extern bool mstpmgr_is_bpdu_rcvd_on_bpdu_guard_enabled_port(PORT_ID port_id);
 extern void mstpmgr_clear_statistics_all();
 extern void mstpmgr_clear_port_statistics(PORT_ID port_number);
+extern bool mstpmgr_clear_vlan_statistics(VLAN_ID vlan_id);
+extern bool mstpmgr_clear_vlan_port_statistics(VLAN_ID vlan_id, PORT_ID port_number);
 extern bool mstpmgr_config_msti_priority(MSTP_MSTID mstid, UINT16 priority);
 extern bool mstpmgr_refresh_all();
 extern void mstpmgr_instance_init_port_state_machines(MSTP_INDEX mstp_index, PORT_ID port_number);

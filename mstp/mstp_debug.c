@@ -679,43 +679,62 @@ void mstpdm_mstp_port(PORT_ID port_number)
 }
 
 /*****************************************************************************/
+/* mstpdebug_print_cist_class: CIST bridge block (no ports)                  */
+/*****************************************************************************/
+static void mstpdebug_print_cist_class(MSTP_CIST_BRIDGE *cist_bridge)
+{
+	STP_DUMP("\nCIST CLASS (MST ID %d)", cist_bridge->co.mstid);
+	STP_DUMP("\n=====================\n");
+	mstpdebug_print_common_bridge(&cist_bridge->co);
+	STP_DUMP("bridgePriority\n"); mstpdebug_print_cist_vector(&(cist_bridge->bridgePriority));
+	STP_DUMP("rootPriority\n"); mstpdebug_print_cist_vector(&(cist_bridge->rootPriority));
+	STP_DUMP("bridgeTimes "); mstpdebug_print_cist_times(&(cist_bridge->bridgeTimes));
+	STP_DUMP("rootTimes "); mstpdebug_print_cist_times(&(cist_bridge->rootTimes));
+	STP_DUMP("\n");
+}
+
+/*****************************************************************************/
+/* mstpdebug_print_msti_class: MSTI bridge block (no ports)                  */
+/*****************************************************************************/
+static void mstpdebug_print_msti_class(MSTP_MSTI_BRIDGE *msti_bridge)
+{
+	STP_DUMP("\nMSTI CLASS (MST ID %d)", msti_bridge->co.mstid);
+	STP_DUMP("\n=====================\n");
+	mstpdebug_print_common_bridge(&msti_bridge->co);
+	STP_DUMP("bridgePriority\n"); mstpdebug_print_msti_vector(&(msti_bridge->bridgePriority));
+	STP_DUMP("rootPriority\n"); mstpdebug_print_msti_vector(&(msti_bridge->rootPriority));
+	STP_DUMP("bridgeTimes "); mstpdebug_print_msti_times(&(msti_bridge->bridgeTimes));
+	STP_DUMP("rootTimes "); mstpdebug_print_msti_times(&(msti_bridge->rootTimes));
+	STP_DUMP("\n");
+}
+
+/*****************************************************************************/
 /* mstpdm_cist: dumps the common spanning tree instance bridge structure     */
 /*****************************************************************************/
 void mstpdm_cist()
 {
 	MSTP_BRIDGE *mstp_bridge = mstpdata_get_bridge();
 	MSTP_CIST_BRIDGE *cist_bridge;
-    PORT_ID port_number;
-    MSTP_COMMON_BRIDGE *cbridge;
+	PORT_ID port_number;
 
-	if(mstp_bridge == NULL)
+	if (mstp_bridge == NULL)
 	{
 		STP_DUMP("mstp_bridge INVALID");
 		return;
 	}
 
 	cist_bridge = MSTP_GET_CIST_BRIDGE(mstp_bridge);
+	if (!cist_bridge)
+		return;
 
-    if(!cist_bridge)
-         return;
+	mstpdebug_print_cist_class(cist_bridge);
 
-	STP_DUMP("\nCIST CLASS (MST ID %d)",cist_bridge->co.mstid);
-	STP_DUMP("\n=====================\n");
-	
-	mstpdebug_print_common_bridge(&cist_bridge->co);
-
-	STP_DUMP("bridgePriority\n"); mstpdebug_print_cist_vector(&(cist_bridge->bridgePriority));
-	STP_DUMP("rootPriority\n"); mstpdebug_print_cist_vector(&(cist_bridge->rootPriority));
-	STP_DUMP("bridgeTimes "); mstpdebug_print_cist_times(&(cist_bridge->bridgeTimes));
-	STP_DUMP("rootTimes "); mstpdebug_print_cist_times(&(cist_bridge->rootTimes));
-	STP_DUMP("\n");
-
-    port_number = port_mask_get_first_port(mstp_bridge->control_mask);
-    while (port_number != BAD_PORT_ID)
-    {
-        mstpdm_cist_port(port_number);
-        port_number = port_mask_get_next_port(mstp_bridge->control_mask, port_number);
-    }
+	port_number = port_mask_get_first_port(mstp_bridge->control_mask);
+	while (port_number != BAD_PORT_ID)
+	{
+		mstpdm_cist_port(port_number);
+		port_number = port_mask_get_next_port(mstp_bridge->control_mask, port_number);
+	}
 
 	mstpdebug_print_port_state(MSTP_INDEX_CIST, mstp_bridge->enable_mask);
 	STP_DUMP("\n");
@@ -815,15 +834,7 @@ void mstpdm_msti(MSTP_MSTID mstid)
 	}
 	
 
-    STP_DUMP("\nMSTI CLASS (MST ID %d)",msti_bridge->co.mstid);
-    STP_DUMP("\n=====================\n");
-
-	mstpdebug_print_common_bridge(&msti_bridge->co);
-
-	STP_DUMP("bridgePriority\n"); mstpdebug_print_msti_vector(&(msti_bridge->bridgePriority));
-	STP_DUMP("rootPriority\n"); mstpdebug_print_msti_vector(&(msti_bridge->rootPriority));
-	STP_DUMP("bridgeTimes "); mstpdebug_print_msti_times(&(msti_bridge->bridgeTimes));
-	STP_DUMP("rootTimes "); mstpdebug_print_msti_times(&(msti_bridge->rootTimes));
+	mstpdebug_print_msti_class(msti_bridge);
 
     port_number = port_mask_get_first_port(msti_bridge->co.portmask);
     while (port_number != BAD_PORT_ID)
@@ -903,6 +914,157 @@ void mstpdm_msti_port(MSTP_MSTID mstid, PORT_ID port_number)
 	STP_DUMP("portTimes "); mstpdebug_print_msti_times(&msti_port->portTimes);
 
 	STP_DUMP("\n");
+}
+
+/*****************************************************************************/
+/* mstpdm_vlan_mstid: resolve a configured VLAN to its MST instance          */
+/*****************************************************************************/
+static bool mstpdm_vlan_mstid(VLAN_ID vlan_id, MSTP_BRIDGE **mstp_bridge, MSTP_MSTID *mstid)
+{
+	if (!IS_VALID_VLAN(vlan_id))
+	{
+		STP_DUMP("error - invalid vlan_id %u\n", vlan_id);
+		return false;
+	}
+
+	*mstp_bridge = mstpdata_get_bridge();
+	if (*mstp_bridge == NULL)
+	{
+		STP_DUMP("mstp_bridge INVALID\n");
+		return false;
+	}
+
+	if (is_mask_clear(g_mstp_vlan_port_db[vlan_id].port_mask))
+	{
+		STP_DUMP("Vlan %d not configured for MSTP\n", vlan_id);
+		return false;
+	}
+
+	*mstid = MSTP_GET_MSTID(*mstp_bridge, vlan_id);
+	if (!MSTP_IS_CIST_MSTID(*mstid) && !MSTP_IS_VALID_MSTID(*mstid))
+	{
+		STP_DUMP("error - vlan %u has invalid mstid mapping\n", vlan_id);
+		return false;
+	}
+
+	return true;
+}
+
+/*****************************************************************************/
+/* mstpdm_print_instance_class: instance bridge for mstid; returns index     */
+/*****************************************************************************/
+static MSTP_INDEX mstpdm_print_instance_class(MSTP_BRIDGE *mstp_bridge, MSTP_MSTID mstid)
+{
+	MSTP_INDEX mstp_index;
+	MSTP_MSTI_BRIDGE *msti_bridge;
+
+	if (MSTP_IS_CIST_MSTID(mstid))
+	{
+		MSTP_CIST_BRIDGE *cist_bridge = MSTP_GET_CIST_BRIDGE(mstp_bridge);
+
+		if (cist_bridge == NULL)
+		{
+			STP_DUMP("error - cist bridge null\n");
+			return MSTP_INDEX_INVALID;
+		}
+
+		mstpdebug_print_cist_class(cist_bridge);
+		return MSTP_INDEX_CIST;
+	}
+
+	mstp_index = MSTP_GET_INSTANCE_INDEX(mstp_bridge, mstid);
+	if (mstp_index == MSTP_INDEX_INVALID)
+	{
+		STP_DUMP("error - mstid %u has not been configured\n", mstid);
+		return MSTP_INDEX_INVALID;
+	}
+
+	msti_bridge = MSTP_GET_MSTI_BRIDGE(mstp_bridge, mstp_index);
+	if (msti_bridge == NULL)
+	{
+		STP_DUMP("error - msti_bridge null for mstid %u\n", mstid);
+		return MSTP_INDEX_INVALID;
+	}
+
+	mstpdebug_print_msti_class(msti_bridge);
+	return mstp_index;
+}
+
+/*****************************************************************************/
+/* mstpdm_dump_mapped_port: CIST port, plus MSTI port when vlan is not CIST  */
+/*****************************************************************************/
+static void mstpdm_dump_mapped_port(MSTP_MSTID mstid, PORT_ID port_number)
+{
+	mstpdm_cist_port(port_number);
+	if (!MSTP_IS_CIST_MSTID(mstid))
+		mstpdm_msti_port(mstid, port_number);
+}
+
+/*****************************************************************************/
+/* mstpdm_dump_mapped_ports: mapped instance ports for each member           */
+/*****************************************************************************/
+static void mstpdm_dump_mapped_ports(MSTP_MSTID mstid, PORT_MASK *mask)
+{
+	PORT_ID port_number;
+
+	for (port_number = port_mask_get_first_port(mask);
+	     port_number != BAD_PORT_ID;
+	     port_number = port_mask_get_next_port(mask, port_number))
+		mstpdm_dump_mapped_port(mstid, port_number);
+}
+
+/*****************************************************************************/
+/* mstpdm_vlan: dumps MSTP state for a VLAN (instance bridge + member ports) */
+/*****************************************************************************/
+static void mstpdm_vlan(VLAN_ID vlan_id)
+{
+	MSTP_BRIDGE *mstp_bridge;
+	MSTP_MSTID mstid;
+	MSTP_INDEX mstp_index;
+	PORT_MASK_LOCAL l_mask;
+	PORT_MASK *vlan_ports = portmask_local_init(&l_mask);
+	UINT8 buffer[500];
+
+	if (!mstpdm_vlan_mstid(vlan_id, &mstp_bridge, &mstid))
+		return;
+
+	mask_to_string((BITMAP_T *)g_mstp_vlan_port_db[vlan_id].port_mask, buffer, sizeof(buffer));
+	STP_DUMP("VLAN %d portmask %s\n", vlan_id, buffer);
+	STP_DUMP("Vlan %d maps to MST ID %u\n", vlan_id, mstid);
+
+	mstp_index = mstpdm_print_instance_class(mstp_bridge, mstid);
+	if (mstp_index == MSTP_INDEX_INVALID)
+		return;
+
+	and_masks(vlan_ports, g_mstp_vlan_port_db[vlan_id].port_mask, mstp_bridge->control_mask);
+	mstpdm_dump_mapped_ports(mstid, vlan_ports);
+
+	and_masks(vlan_ports, vlan_ports, mstp_bridge->enable_mask);
+	mstpdebug_print_port_state(mstp_index, vlan_ports);
+	STP_DUMP("\n");
+}
+
+/*****************************************************************************/
+/* mstpdm_vlan_port: dumps MSTP state for a VLAN and port                    */
+/*****************************************************************************/
+static void mstpdm_vlan_port(VLAN_ID vlan_id, PORT_ID port_number)
+{
+	MSTP_BRIDGE *mstp_bridge;
+	MSTP_MSTID mstid;
+
+	if (!mstpdm_vlan_mstid(vlan_id, &mstp_bridge, &mstid))
+		return;
+
+	if (!IS_MEMBER(g_mstp_vlan_port_db[vlan_id].port_mask, port_number))
+	{
+		STP_DUMP("error - %s is not a member of vlan %u for MSTP\n",
+			stp_intf_get_port_name(port_number), vlan_id);
+		return;
+	}
+
+	STP_DUMP("Vlan %u maps to MST ID %u\n", vlan_id, mstid);
+	mstpdm_mstp_port(port_number);
+	mstpdm_dump_mapped_port(mstid, port_number);
 }
 
 /*****************************************************************************/
@@ -1141,13 +1303,18 @@ void mstpdbg_process_ctl_msg(void *msg)
             }
             break;
         }
+        case STP_CTL_DUMP_VLAN:
+        {
+            vlan_id = (VLAN_ID) pmsg->vlan_id;
+            mstpdm_vlan(vlan_id);
+            break;
+        }
         case STP_CTL_DUMP_INTF:
         {
+            vlan_id = (VLAN_ID) pmsg->vlan_id;
             port_number = stp_intf_get_port_id_by_name(pmsg->intf_name);
             if (port_number != BAD_PORT_ID)
-            {
-                mstpdm_mstp_port(port_number);
-            }
+                mstpdm_vlan_port(vlan_id, port_number);
             break;
         }
         case STP_CTL_SET_DBG:
@@ -1254,6 +1421,34 @@ void mstpdbg_process_ctl_msg(void *msg)
                 mstpmgr_clear_port_statistics(port_number);
                 MSTP_DUMP("Stats cleared for %s\n", pmsg->intf_name);
             }
+            break;
+        }
+
+        case STP_CTL_CLEAR_VLAN:
+        {
+            vlan_id = (VLAN_ID)pmsg->vlan_id;
+            if (mstpmgr_clear_vlan_statistics(vlan_id))
+                MSTP_DUMP("Stats cleared for vlan %d\n", vlan_id);
+            else
+                MSTP_DUMP("Vlan %d not configured for MSTP\n", vlan_id);
+            break;
+        }
+
+        case STP_CTL_CLEAR_VLAN_INTF:
+        {
+            vlan_id = (VLAN_ID)pmsg->vlan_id;
+            port_number = stp_intf_get_port_id_by_name(pmsg->intf_name);
+            if (port_number == BAD_PORT_ID)
+            {
+                MSTP_DUMP("error - invalid interface %s\n", pmsg->intf_name);
+                break;
+            }
+
+            if (mstpmgr_clear_vlan_port_statistics(vlan_id, port_number))
+                MSTP_DUMP("Stats cleared for vlan %d %s\n", vlan_id, pmsg->intf_name);
+            else
+                MSTP_DUMP("error - %s is not a member of vlan %d for MSTP\n",
+                    pmsg->intf_name, vlan_id);
             break;
         }
     }
