@@ -12,7 +12,104 @@
 MSTP_GLOBAL         g_mstp_global;
 MSTP_VLAN_PORT_DB   g_mstp_vlan_port_db[MAX_VLAN_ID];
 MSTP_PORT_VLAN_DB  **g_mstp_port_vlan_db;
- 
+
+/*****************************************************************************/
+/* mstpdata_free_bridge_bitmaps: free all heap bitmaps on an MSTP bridge       */
+/*****************************************************************************/
+static void mstpdata_free_bridge_bitmaps(MSTP_BRIDGE *bridge)
+{
+    MSTP_CIST_BRIDGE *cist_bridge;
+    int i;
+
+    if (bridge == NULL)
+        return;
+
+    if (bridge->control_mask)
+    {
+        bmp_free(bridge->control_mask);
+        bridge->control_mask = NULL;
+    }
+    if (bridge->enable_mask)
+    {
+        bmp_free(bridge->enable_mask);
+        bridge->enable_mask = NULL;
+    }
+    if (bridge->admin_disable_mask)
+    {
+        bmp_free(bridge->admin_disable_mask);
+        bridge->admin_disable_mask = NULL;
+    }
+    if (bridge->admin_pt2pt_mask)
+    {
+        bmp_free(bridge->admin_pt2pt_mask);
+        bridge->admin_pt2pt_mask = NULL;
+    }
+    if (bridge->admin_edge_mask)
+    {
+        bmp_free(bridge->admin_edge_mask);
+        bridge->admin_edge_mask = NULL;
+    }
+    for (i = 0; i < MSTP_MAX_INSTANCES_PER_REGION + 1; i++)
+    {
+        if (bridge->config_mask[i])
+        {
+            bmp_free(bridge->config_mask[i]);
+            bridge->config_mask[i] = NULL;
+        }
+    }
+
+    cist_bridge = MSTP_GET_CIST_BRIDGE(bridge);
+    if (cist_bridge->co.portmask)
+    {
+        bmp_free(cist_bridge->co.portmask);
+        cist_bridge->co.portmask = NULL;
+    }
+}
+
+/*****************************************************************************/
+/* mstpdata_free_port_vlan_db: free port-to-vlan mapping DB                  */
+/*****************************************************************************/
+static void mstpdata_free_port_vlan_db(void)
+{
+    PORT_ID port_number;
+
+    if (g_mstp_port_vlan_db == NULL)
+        return;
+
+    for (port_number = 0; port_number < g_max_stp_port; port_number++)
+    {
+        if (g_mstp_port_vlan_db[port_number] != NULL)
+        {
+            if (g_mstp_port_vlan_db[port_number]->vlan_mask)
+            {
+                bmp_free(g_mstp_port_vlan_db[port_number]->vlan_mask);
+                g_mstp_port_vlan_db[port_number]->vlan_mask = NULL;
+            }
+            free(g_mstp_port_vlan_db[port_number]);
+            g_mstp_port_vlan_db[port_number] = NULL;
+        }
+    }
+    free(g_mstp_port_vlan_db);
+    g_mstp_port_vlan_db = NULL;
+}
+
+/*****************************************************************************/
+/* mstpdata_free_vlan_port_db_bitmaps: free vlan-to-port DB bitmaps          */
+/*****************************************************************************/
+static void mstpdata_free_vlan_port_db_bitmaps(UINT16 up_to_vlan_id)
+{
+    UINT16 vlan_id;
+
+    for (vlan_id = 1; vlan_id < up_to_vlan_id; vlan_id++)
+    {
+        if (g_mstp_vlan_port_db[vlan_id].port_mask)
+        {
+            bmp_free(g_mstp_vlan_port_db[vlan_id].port_mask);
+            g_mstp_vlan_port_db[vlan_id].port_mask = NULL;
+        }
+    }
+}
+
 /*****************************************************************************/
 /* mstpdata_get_port: returns the data structure associated with the input   */
 /* port number                                                               */
@@ -109,7 +206,13 @@ static void mstpdata_free_msti_bridge(MSTP_INDEX mstp_index)
 		return;
 	}
 
-    STP_LOG_DEBUG("[MST Index %d] Deallocated msti_bridge", mstp_index);	
+    STP_LOG_DEBUG("[MST Index %d] Deallocated msti_bridge", mstp_index);
+
+    if (msti_bridge->co.portmask)
+    {
+        bmp_free(msti_bridge->co.portmask);
+        msti_bridge->co.portmask = NULL;
+    }
 
 	free(msti_bridge);
 	mstp_bridge->msti[mstp_index] = NULL;
@@ -216,6 +319,10 @@ MSTP_BRIDGE * mstpdata_alloc_mstp_bridge()
             return NULL;
         }
     }
+    else
+    {
+        mstpdata_free_bridge_bitmaps(mstp_global->bridge);
+    }
 
     ret = bmp_alloc(&mstp_global->bridge->control_mask, g_max_stp_port);
     ret |= bmp_alloc(&mstp_global->bridge->enable_mask, g_max_stp_port);
@@ -230,39 +337,10 @@ MSTP_BRIDGE * mstpdata_alloc_mstp_bridge()
 
     if (ret != 0)
     {
-        if(mstp_global->bridge->control_mask)
-        {
-            bmp_free(mstp_global->bridge->control_mask);
-        }
-        if(mstp_global->bridge->enable_mask)
-        {
-            bmp_free(mstp_global->bridge->enable_mask);
-        }
-        if(mstp_global->bridge->admin_disable_mask)
-        {
-            bmp_free(mstp_global->bridge->admin_disable_mask);
-        }
-        if(mstp_global->bridge->admin_pt2pt_mask)
-        {
-            bmp_free(mstp_global->bridge->admin_pt2pt_mask);
-        }
-         if(mstp_global->bridge->admin_edge_mask)
-        {
-            bmp_free(mstp_global->bridge->admin_edge_mask);
-        }
-        for (i = 0; i<MSTP_MAX_INSTANCES_PER_REGION+1; i++)
-        {
-            if(mstp_global->bridge->config_mask[i])
-            {
-                bmp_free(mstp_global->bridge->config_mask[i]);
-            }
-        }
-
+        mstpdata_free_bridge_bitmaps(mstp_global->bridge);
         STP_LOG_CRITICAL("BMP alloc failed");
-        if(mstp_global->bridge)
-        {
-            free(mstp_global->bridge);
-        }
+        free(mstp_global->bridge);
+        mstp_global->bridge = NULL;
         return NULL;
     }
 
@@ -276,7 +354,6 @@ void mstpdata_free_mstp_bridge()
 {
     MSTP_INDEX mstp_index;
     MSTP_GLOBAL *mstp_global = &g_mstp_global;
-    int i = 0;
 
     if (mstp_global->bridge == NULL)
     {
@@ -292,36 +369,7 @@ void mstpdata_free_mstp_bridge()
         }
     }
 
-    if(mstp_global->bridge->control_mask)
-    {
-        if(mstp_global->bridge->control_mask)
-        {
-            bmp_free(mstp_global->bridge->control_mask);
-        }
-        if(mstp_global->bridge->enable_mask)
-        {
-            bmp_free(mstp_global->bridge->enable_mask);
-        }
-        if(mstp_global->bridge->admin_disable_mask)
-        {
-            bmp_free(mstp_global->bridge->admin_disable_mask);
-        }
-        if(mstp_global->bridge->admin_pt2pt_mask)
-        {
-            bmp_free(mstp_global->bridge->admin_pt2pt_mask);
-        }
-         if(mstp_global->bridge->admin_edge_mask)
-        {
-            bmp_free(mstp_global->bridge->admin_edge_mask);
-        }
-        for (i = 0; i<MSTP_MAX_INSTANCES_PER_REGION+1; i++)
-        {
-            if(mstp_global->bridge->config_mask[i])
-            {
-                bmp_free(mstp_global->bridge->config_mask[i]);
-            }
-        }
-    }
+    mstpdata_free_bridge_bitmaps(mstp_global->bridge);
     STP_LOG_DEBUG("mstp_bridge deallocated");
 
     free(mstp_global->bridge);
@@ -449,6 +497,9 @@ bool mstpdata_port_vlan_db_init()
     PORT_ID port_number;
     int ret = 0;
 
+    if (g_mstp_port_vlan_db != NULL)
+        mstpdata_free_port_vlan_db();
+
     g_mstp_port_vlan_db = calloc(1, (sizeof(MSTP_PORT_VLAN_DB *) * g_max_stp_port));
     if (!g_mstp_port_vlan_db)
     {
@@ -462,6 +513,7 @@ bool mstpdata_port_vlan_db_init()
         if(!g_mstp_port_vlan_db[port_number])
         {
             STP_LOG_CRITICAL("Calloc failed");
+            mstpdata_free_port_vlan_db();
             return false;
         }
 
@@ -469,6 +521,7 @@ bool mstpdata_port_vlan_db_init()
         if (ret != 0)
         {
             STP_LOG_CRITICAL("BMP alloc failed");
+            mstpdata_free_port_vlan_db();
             return false;
         }
         g_mstp_port_vlan_db[port_number]->untag_vlan = VLAN_ID_INVALID;
@@ -483,12 +536,15 @@ void mstpdata_vlan_port_db_init()
     UINT16 vlan_id;
     int ret = 0;
 
+    mstpdata_free_vlan_port_db_bitmaps(MAX_VLAN_ID);
+
     for(vlan_id = 1; vlan_id < MAX_VLAN_ID; vlan_id++)
     {
         ret = bmp_alloc(&g_mstp_vlan_port_db[vlan_id].port_mask, g_max_stp_port);
         if (ret != 0)
         {
             STP_LOG_CRITICAL("BMP alloc failed");
+            mstpdata_free_vlan_port_db_bitmaps(vlan_id);
             return;
         }
     }
