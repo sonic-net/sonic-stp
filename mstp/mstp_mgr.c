@@ -3190,57 +3190,151 @@ void mstpmgr_reset_bpdu_guard_active(PORT_ID port_id)
     }
 }
 /*****************************************************************************/
+/* mstpmgr_clear_instance_port_statistics: clear one MST instance on a port  */
+/*****************************************************************************/
+static void mstpmgr_clear_instance_port_statistics(PORT_ID port_number, MSTP_INDEX mstp_index)
+{
+    MSTP_BRIDGE *mstp_bridge = mstpdata_get_bridge();
+    MSTP_PORT *mstp_port;
+    MSTP_COMMON_PORT *cport;
+
+    if (port_number == BAD_PORT_ID || mstp_bridge == NULL)
+        return;
+
+    if (mstp_index != MSTP_INDEX_CIST)
+    {
+        if (!MSTP_IS_VALID_MSTI_INDEX(mstp_index) || mstp_bridge->msti[mstp_index] == NULL)
+            return;
+    }
+
+    mstp_port = mstpdata_get_port(port_number);
+    if (mstp_port == NULL)
+        return;
+
+    cport = mstputil_get_common_port(mstp_index, mstp_port);
+    if (!cport)
+        return;
+
+    if (mstp_index == MSTP_INDEX_CIST)
+    {
+        mstp_port->stats.tx.config_bpdu = mstp_port->stats.tx.tcn_bpdu =
+            mstp_port->stats.tx.rstp_bpdu = mstp_port->stats.tx.mstp_bpdu = 0;
+
+        mstp_port->stats.rx.config_bpdu = mstp_port->stats.rx.tcn_bpdu =
+            mstp_port->stats.rx.rstp_bpdu = mstp_port->stats.rx.mstp_bpdu = 0;
+
+        SET_BIT(cport->modified_fields, MSTP_PORT_MEMBER_CLEAR_STATS_BIT);
+        mstputil_sync_mst_port(mstp_index, port_number);
+        mstp_port->stats.tx.update_flag = false;
+        mstp_port->stats.rx.update_flag = false;
+    }
+    else
+    {
+        cport->stats.tx_bpdu = cport->stats.rx_bpdu = 0;
+        SET_BIT(cport->modified_fields, MSTP_PORT_MEMBER_CLEAR_STATS_BIT);
+        mstputil_sync_mst_port(mstp_index, port_number);
+        cport->stats.update_flag = false;
+    }
+}
+
+/*****************************************************************************/
+/* mstpmgr_get_vlan_mstp_index: MST instance that owns this VLAN             */
+/*****************************************************************************/
+static bool mstpmgr_get_vlan_mstp_index(VLAN_ID vlan_id, MSTP_BRIDGE **mstp_bridge, MSTP_INDEX *mstp_index)
+{
+    MSTP_MSTID mstid;
+
+    if (!IS_VALID_VLAN(vlan_id))
+        return false;
+
+    *mstp_bridge = mstpdata_get_bridge();
+    if (*mstp_bridge == NULL)
+        return false;
+
+    if (mstpdata_get_port_mask_for_vlan(vlan_id) == NULL)
+        return false;
+
+    mstid = MSTP_GET_MSTID(*mstp_bridge, vlan_id);
+    *mstp_index = mstputil_get_index(mstid);
+    if (*mstp_index == MSTP_INDEX_INVALID)
+        return false;
+
+    if (*mstp_index != MSTP_INDEX_CIST &&
+        (!MSTP_IS_VALID_MSTI_INDEX(*mstp_index) || (*mstp_bridge)->msti[*mstp_index] == NULL))
+        return false;
+
+    return true;
+}
+
+/*****************************************************************************/
 /* mstpmgr_clear_port_statistics: clears the bpdu statistics associated with */
 /* the port                                                                  */
 /*****************************************************************************/
 void mstpmgr_clear_port_statistics(PORT_ID port_number)
 {
-    MSTP_BRIDGE *mstp_bridge =  mstpdata_get_bridge();
-    MSTP_PORT *mstp_port;
-    MSTP_INDEX  mstp_index;
-    MSTP_COMMON_PORT *cport;
+    MSTP_INDEX mstp_index;
 
-    if(port_number == BAD_PORT_ID)
+    if (port_number == BAD_PORT_ID || mstpdata_get_bridge() == NULL)
         return;
 
-    mstp_port = mstpdata_get_port(port_number);
-    if (mstp_port)
+    if (mstpdata_get_port(port_number) == NULL)
+        return;
+
+    for (mstp_index = MSTP_INDEX_MIN; mstp_index <= MSTP_INDEX_CIST; mstp_index++)
+        mstpmgr_clear_instance_port_statistics(port_number, mstp_index);
+}
+
+/*****************************************************************************/
+/* mstpmgr_clear_vlan_statistics: clear the MST instance mapped to a VLAN    */
+/*****************************************************************************/
+bool mstpmgr_clear_vlan_statistics(VLAN_ID vlan_id)
+{
+    MSTP_BRIDGE *mstp_bridge;
+    MSTP_INDEX mstp_index;
+    PORT_MASK *vlan_ports;
+    PORT_MASK_LOCAL l_mask;
+    PORT_MASK *mask = portmask_local_init(&l_mask);
+    PORT_ID port_number;
+    bool cleared = false;
+
+    if (!mstpmgr_get_vlan_mstp_index(vlan_id, &mstp_bridge, &mstp_index))
+        return false;
+
+    vlan_ports = mstpdata_get_port_mask_for_vlan(vlan_id);
+    and_masks(mask, vlan_ports, mstp_bridge->control_mask);
+
+    for (port_number = port_mask_get_first_port(mask);
+         port_number != BAD_PORT_ID;
+         port_number = port_mask_get_next_port(mask, port_number))
     {
-        for (mstp_index = MSTP_INDEX_MIN; mstp_index <= MSTP_INDEX_CIST; mstp_index++)
-        {
-            if (mstp_index != MSTP_INDEX_CIST)
-            {
-                if (mstp_bridge->msti[mstp_index] == NULL)
-                    continue;
-            }
-
-            cport = mstputil_get_common_port(mstp_index, mstp_port);
-
-            if (!cport)
-                continue;
-
-            if(mstp_index == MSTP_INDEX_CIST)
-            {
-                mstp_port->stats.tx.config_bpdu = mstp_port->stats.tx.tcn_bpdu =
-                    mstp_port->stats.tx.rstp_bpdu = mstp_port->stats.tx.mstp_bpdu = 0;
-
-                mstp_port->stats.rx.config_bpdu = mstp_port->stats.rx.tcn_bpdu =
-                    mstp_port->stats.rx.rstp_bpdu = mstp_port->stats.rx.mstp_bpdu = 0;
-
-                SET_BIT(cport->modified_fields, MSTP_PORT_MEMBER_CLEAR_STATS_BIT);
-                mstputil_sync_mst_port(mstp_index, port_number);
-                mstp_port->stats.tx.update_flag = false;
-                mstp_port->stats.rx.update_flag = false;
-            }
-            else 
-            {
-                cport->stats.tx_bpdu = cport->stats.rx_bpdu = 0;
-                SET_BIT(cport->modified_fields, MSTP_PORT_MEMBER_CLEAR_STATS_BIT);
-                mstputil_sync_mst_port(mstp_index, port_number);
-                cport->stats.update_flag = false;
-            }
-        }
+        mstpmgr_clear_instance_port_statistics(port_number, mstp_index);
+        cleared = true;
     }
+
+    return cleared;
+}
+
+/*****************************************************************************/
+/* mstpmgr_clear_vlan_port_statistics: clear one VLAN member port            */
+/*****************************************************************************/
+bool mstpmgr_clear_vlan_port_statistics(VLAN_ID vlan_id, PORT_ID port_number)
+{
+    MSTP_BRIDGE *mstp_bridge;
+    MSTP_INDEX mstp_index;
+    PORT_MASK *vlan_ports;
+
+    if (port_number == BAD_PORT_ID)
+        return false;
+
+    if (!mstpmgr_get_vlan_mstp_index(vlan_id, &mstp_bridge, &mstp_index))
+        return false;
+
+    vlan_ports = mstpdata_get_port_mask_for_vlan(vlan_id);
+    if (!IS_MEMBER(vlan_ports, port_number) || !IS_MEMBER(mstp_bridge->control_mask, port_number))
+        return false;
+
+    mstpmgr_clear_instance_port_statistics(port_number, mstp_index);
+    return true;
 }
 
 /*****************************************************************************/

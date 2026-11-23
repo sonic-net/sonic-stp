@@ -155,25 +155,57 @@ int stp_pkt_sock_create(INTERFACE_NODE *intf_node)
     return intf_node->sock;
 }
 
+/* One MST BPDU carries CIST and every MSTI, so the raw frame follows the CIST port filter. */
+static bool stp_pkt_bpdu_debug(VLAN_ID vlan_id, uint32_t port_id, bool is_rx)
+{
+    if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+    {
+        if (is_rx)
+            return MSTP_DEBUG_BPDU_RX(MSTP_INDEX_CIST, port_id);
+        return MSTP_DEBUG_BPDU_TX(MSTP_INDEX_CIST, port_id);
+    }
+
+    if (is_rx)
+        return STP_DEBUG_BPDU_RX(vlan_id, port_id);
+    return STP_DEBUG_BPDU_TX(vlan_id, port_id);
+}
+
+static bool stp_pkt_hex_verbose(void)
+{
+    if (STP_IS_PROTOCOL_ENABLED(L2_MSTP))
+        return debugGlobal.mstp.verbose;
+    return STP_DEBUG_VERBOSE;
+}
+
+/* 256 payload bytes, two hex digits each, a space after every fourth byte, plus NUL. */
+#define STP_PKT_DUMP_BYTES   256
+#define STP_PKT_DUMP_STRLEN  ((STP_PKT_DUMP_BYTES * 2) + (STP_PKT_DUMP_BYTES / 4) + 1)
+
 static void stp_pkt_dump(INTERFACE_NODE *intf_node, VLAN_ID vlan_id, char * pkt, uint16_t pkt_len, bool is_rx)
 {
-    static char pkt_str[256];
-    char * pkt_parser = (char *)&pkt_str;
+    char pkt_str[STP_PKT_DUMP_STRLEN];
+    size_t used = 0;
     UINT32 pkt_count = is_rx ? STPD_GET_PKT_COUNT(intf_node->port_id, pkt_rx):STPD_GET_PKT_COUNT(intf_node->port_id, pkt_tx);
     int i = 0;
-    
-    memset(pkt_str, 0, sizeof(pkt_str));
 
-    STP_PKTLOG("%s - [port:%3u][vlan:%4u][len:%4lu][cnt:%lu]",(is_rx?"RX":"TX"),
-            intf_node->port_id, vlan_id, pkt_len, pkt_count); 
+    pkt_str[0] = '\0';
 
-    if (STP_DEBUG_VERBOSE)
+    STP_PKTLOG("%s - [port:%3u][vlan:%4u][len:%4u][cnt:%u]",(is_rx?"RX":"TX"),
+            intf_node->port_id, vlan_id, pkt_len, pkt_count);
+
+    if (stp_pkt_hex_verbose())
     {
-        for(i = 0; (i < pkt_len && i < 256); i++)
+        for(i = 0; (i < pkt_len && i < STP_PKT_DUMP_BYTES); i++)
         {
-            pkt_parser += sprintf(pkt_parser, "%02x", pkt[i] & 0xff);
+            int wrote;
+
             if (0 == ((i+1)%4))
-                pkt_parser += sprintf(pkt_parser, " ");
+                wrote = snprintf(pkt_str + used, sizeof(pkt_str) - used, "%02x ", pkt[i] & 0xff);
+            else
+                wrote = snprintf(pkt_str + used, sizeof(pkt_str) - used, "%02x", pkt[i] & 0xff);
+            if (wrote < 0 || (size_t)wrote >= sizeof(pkt_str) - used)
+                break;
+            used += (size_t)wrote;
         }
         STP_PKTLOG("%s",pkt_str);
     }
@@ -229,7 +261,7 @@ int stp_pkt_tx_handler(uint32_t port_id, VLAN_ID vlan_id, char *buffer, uint16_t
     memset(send_buf, 0, STP_MAX_PKT_LEN);
     stp_pkt_fill_tx_buf(size, tagged?vlan_id:0, buffer, send_buf);
 
-    if (STP_DEBUG_BPDU_TX(vlan_id, intf_node->port_id))
+    if (stp_pkt_bpdu_debug(vlan_id, intf_node->port_id, false))
         stp_pkt_dump(intf_node, vlan_id, send_buf, size, false);
 
     memset(&sa, 0, sizeof(struct sockaddr_ll));
@@ -366,7 +398,7 @@ void stp_pkt_rx_handler (evutil_socket_t fd, short what, void *arg)
 
     STPD_INCR_PKT_COUNT(intf_node->port_id, pkt_rx);
 
-    if (STP_DEBUG_BPDU_RX(vlan_id, intf_node->port_id))
+    if (stp_pkt_bpdu_debug(vlan_id, intf_node->port_id, true))
         stp_pkt_dump(intf_node, vlan_id, pkt, packet_len, true);
 
     if (STP_IS_PROTOCOL_ENABLED(L2_PVSTP))
