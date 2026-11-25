@@ -1397,7 +1397,7 @@ void stpmgr_rx_stp_bpdu(uint16_t vlan_id, uint32_t port_id, char *pkt)
     flag = stputil_get_index_from_vlan(vlan_id, &stp_index);
 
     // rstp/stp processing
-    if (!flag)
+    if ((!flag) || (stp_index == STP_INDEX_INVALID))
     {
         if (bpdu->protocol_version_id == STP_VERSION_ID) 
         {
