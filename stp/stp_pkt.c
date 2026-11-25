@@ -249,6 +249,39 @@ int stp_pkt_tx_handler(uint32_t port_id, VLAN_ID vlan_id, char *buffer, uint16_t
     return ret;
 }
 
+/*
+ * stp_pkt_is_own_source_mac: true when Ethernet SA matches local bridge MAC.
+ */
+static bool stp_pkt_is_own_source_mac(const char *pkt, ssize_t packet_len)
+{
+    MAC_ADDRESS *src_mac;
+
+    if (packet_len < (ssize_t)(L2_ETH_ADD_LEN * 2))
+        return false;
+
+    src_mac = (MAC_ADDRESS *)(pkt + L2_ETH_ADD_LEN);
+    return (stputil_compare_mac(src_mac, &g_stp_base_mac_addr) == EQUAL_TO);
+}
+
+/*
+ * Drop PF_PACKET loopback of local TX on all ports (PACKET_OUTGOING). Hub/shared-
+ * medium own BPDUs arrive from wire as PACKET_HOST and must reach STP for backup
+ * role handling. On admin-edge ports also drop own source MAC if OUTGOING is not
+ * set by the platform.
+ */
+static bool stp_pkt_drop_self_originated(PORT_ID port_number, const char *pkt,
+        ssize_t packet_len, unsigned char pkttype)
+{
+    if (pkttype == PACKET_OUTGOING)
+        return true;
+
+    if (STP_IS_PROTOCOL_ENABLED(L2_MSTP) &&
+        mstplib_port_is_admin_edge_port(port_number) &&
+        stp_pkt_is_own_source_mac(pkt, packet_len))
+        return true;
+
+    return false;
+}
 
 void stp_pkt_rx_handler (evutil_socket_t fd, short what, void *arg)
 {
@@ -350,6 +383,10 @@ void stp_pkt_rx_handler (evutil_socket_t fd, short what, void *arg)
             break;
         }
 	}
+
+    if (stp_pkt_drop_self_originated(intf_node->port_id, pkt, packet_len,
+                from.sll_pkttype))
+        return;
 
     //if PO-member port, assign intf_node to PO node.
     if (intf_node->master_ifindex)
