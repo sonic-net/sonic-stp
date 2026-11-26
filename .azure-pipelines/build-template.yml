@@ -10,6 +10,7 @@ parameters:
 - name: pool
   type: string
   values:
+  - sonic-ubuntu-1c
   - sonicso1ES-amd64
   - default
   - sonicso1ES-armhf

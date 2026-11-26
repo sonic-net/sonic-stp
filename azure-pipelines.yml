@@ -24,6 +24,7 @@ stages:
   - template: .azure-pipelines/build-template.yml
     parameters:
       arch: amd64
+      pool: sonic-ubuntu-1c
       sonic_slave: sonic-slave-bookworm
       swss_common_artifact_name: sonic-swss-common-bookworm
       artifact_name: sonic-stp
